@@ -1,0 +1,12 @@
+{
+  // İz Peşinde istemcisi — Cloudflare Worker, yalnız statik dosyalar (kod yok): izpesinde.josephuz.com.
+  // Dosyalar `npm run build:web` ile dist/ klasörüne toplanır; yayın: `npm run deploy:web`.
+  // Oyun tek oyunculudur: ayrı bir oyun sunucusu ve tünel yoktur.
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "izpesinde",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": false,
+  "assets": { "directory": "./dist" },
+  // custom_domain: DNS kaydını wrangler açar; bu adda başka kayıt (tunnel route, CNAME) kalmamalı.
+  "routes": [{ "pattern": "izpesinde.josephuz.com", "custom_domain": true }]
+}

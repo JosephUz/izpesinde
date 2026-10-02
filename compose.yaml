@@ -1,0 +1,15 @@
+# Yerel Docker kurulumu: `docker compose up -d --build`, ardından http://localhost:5197
+# Oyun portu yalnızca bu bilgisayara açıktır (127.0.0.1). Oyun tek oyunculu olduğu için tünel yoktur.
+name: izpesinde
+services:
+  game:
+    build: .
+    image: iz-pesinde
+    container_name: izpesinde
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${PORT:-5197}:5197"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 5197

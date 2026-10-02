@@ -1,0 +1,16 @@
+node_modules
+.git
+*.log
+README.md
+DEDEKTIF_OYUNU_TASARIM.md
+Baslat.cmd
+Dockerfile
+compose.yaml
+.dockerignore
+tests
+scripts
+artifacts
+dist
+.wrangler
+wrangler.jsonc
+.env

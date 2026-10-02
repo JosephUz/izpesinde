@@ -52,7 +52,7 @@ Sunucu oyun dosyalarını `no-store` ile verir; `/health` yanıtı ayakta olan y
 | Sol tık | İmlecin altındaki kişi: dedektif işaretler, savcı yakalar, suçlu kılığına girer |
 | E | Yakındaki kutuyu al / bırak |
 | F | İş noktasında çalış |
-| X | Suçlu: ortak öldürme hakkı (turda 2) |
+| Q | Suçlu: ortak öldürme hakkı (turda 2) |
 | M | Küçük haritayı büyüt / küçült |
 | Tab | Basılı: skor; elenince: izlenen takım arkadaşını değiştir |
 | Esc | Duraklat / devam |

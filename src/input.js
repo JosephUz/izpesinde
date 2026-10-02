@@ -11,7 +11,7 @@ import { active } from './roster.js';
  * hooks: escape(), tab(down), blur(), map() (M: küçük haritayı büyüt / küçült), use() (imleçte hedef yokken uyarı),
  * sound(type), busy() (diyalog açık mı).
  */
-const BINDS = { KeyE: 'carry', KeyF: 'blend', KeyX: 'kill', Space: 'jump' };
+const BINDS = { KeyE: 'carry', KeyF: 'blend', KeyQ: 'kill', Space: 'jump' };
 
 export function createInput(canvas, app, hooks) {
   const keys = new Set(), mouse = { x: -1, y: -1 };

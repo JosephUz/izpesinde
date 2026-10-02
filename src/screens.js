@@ -15,7 +15,7 @@ const ICON = { detective: '⌕', prosecutor: '⚖', criminal: '◇' };
 export const KEYS = {
   detective: 'Sol tık: İşaretle · E: Kutu taşı · F: Çalış',
   prosecutor: 'Sol tık: Yakala · E: Kutu taşı · F: Çalış',
-  criminal: 'Sol tık: Kılık değiştir (−1) · X: Ortak cinayet · E: Kutu · F: Çalış',
+  criminal: 'Sol tık: Kılık değiştir (−1) · Q: Ortak cinayet · E: Kutu · F: Çalış',
 };
 const ENDINGS = {
   capture: ['Kaçacak yer kalmadı.', 'İki suçlu da yakalandı. Kanun tarafı kazandı.'],
@@ -67,7 +67,7 @@ export function createScreens(root, app, hooks) {
   function help(back = null) {
     const wasPaused = app.paused;
     app.paused = true;
-    show(`<span class="eyebrow">KASABADA HAYATTA KALMA REHBERİ</span><h2>Her adım bir iz.</h2><div class="controls"><div><kbd>W A S D</kbd> Hareket</div><div><kbd>SHIFT</kbd> Koş</div><div><kbd>SPACE</kbd> Çift zıpla</div><div><kbd>SAĞ TIK</kbd> Atıl</div><div><kbd>SOL TIK</kbd> Dedektif işaretler · Savcı yakalar · Suçlu kılığa girer</div><div><kbd>E</kbd> Kutuyu al / bırak</div><div><kbd>F</kbd> İş noktasında çalış</div><div><kbd>X</kbd> Suçlu: ortak cinayet hakkı</div><div><kbd>M</kbd> Haritayı büyüt / küçült</div><div><kbd>TAB</kbd> Skor / izleyicide hedef</div><div><kbd>ESC</kbd> Duraklat</div></div><p>Herkes yalnızca çevresindeki daireyi görür. Suçlular arkalarında iki saniye yerde kalan izler bırakır; izler başta 5 saniye arayla ve 5 saniye geriden düşer, tur ilerledikçe ikisi de kısalır. Dedektif izlerini yalnızca dedektifler, savcı izlerini yalnızca savcılar görür. İşaretlenen kişinin bölgesi savcıların haritasına düşer; kılık değiştirince işaret kalkar.</p><p>Beş tur boyunca rolünü sen seçersin, puanların kalır. <b>Kazanmak için en yüksek kişisel skoru topla.</b></p><button class="primary" id="closeHelp">ANLADIM →</button>`);
+    show(`<span class="eyebrow">KASABADA HAYATTA KALMA REHBERİ</span><h2>Her adım bir iz.</h2><div class="controls"><div><kbd>W A S D</kbd> Hareket</div><div><kbd>SHIFT</kbd> Koş</div><div><kbd>SPACE</kbd> Çift zıpla</div><div><kbd>SAĞ TIK</kbd> Atıl</div><div><kbd>SOL TIK</kbd> Dedektif işaretler · Savcı yakalar · Suçlu kılığa girer</div><div><kbd>E</kbd> Kutuyu al / bırak</div><div><kbd>F</kbd> İş noktasında çalış</div><div><kbd>Q</kbd> Suçlu: ortak cinayet hakkı</div><div><kbd>M</kbd> Haritayı büyüt / küçült</div><div><kbd>TAB</kbd> Skor / izleyicide hedef</div><div><kbd>ESC</kbd> Duraklat</div></div><p>Herkes yalnızca çevresindeki daireyi görür. Suçlular arkalarında iki saniye yerde kalan izler bırakır; izler başta 5 saniye arayla ve 5 saniye geriden düşer, tur ilerledikçe ikisi de kısalır. Dedektif izlerini yalnızca dedektifler, savcı izlerini yalnızca savcılar görür. İşaretlenen kişinin bölgesi savcıların haritasına düşer; kılık değiştirince işaret kalkar.</p><p>Beş tur boyunca rolünü sen seçersin, puanların kalır. <b>Kazanmak için en yüksek kişisel skoru topla.</b></p><button class="primary" id="closeHelp">ANLADIM →</button>`);
     $('#closeHelp').onclick = () => {
       if (back) back();
       else { close(); app.paused = wasPaused; if (wasPaused && app.playing) pauseMenu(); }

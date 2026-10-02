@@ -101,7 +101,7 @@ Büyük bir ortaçağ kasabasında geçen; kalabalığa karışma, iz sürme, ta
 
 ## 10. Cinayet
 
-- İki suçlunun turda **ortak 2** öldürme hakkı vardır (X, en yakın geçerli kişi). Diğer suçlu hedeflenemez. (İki savcının da ölebilmesi için hak en az 2'dir.)
+- İki suçlunun turda **ortak 2** öldürme hakkı vardır (Q, en yakın geçerli kişi). Diğer suçlu hedeflenemez. (İki savcının da ölebilmesi için hak en az 2'dir.)
 - NPC öldürmek **−1**, dedektif öldürmek **+1**, savcı öldürmek **+2**.
 - Ölen dedektifin kalan işaret hakları, ölen savcının kalan yakalama hakları yanar. İki savcı da ölürse suçlular kazanır.
 - Cinayet suçluları açığa çıkarmaz.
@@ -132,7 +132,7 @@ Puanlar tur boyunca birikir, tur sonunda tek kez skora eklenir.
 | Sol tık | Dedektif: işaretle · Savcı: yakala · Suçlu: tıklanan kişinin kılığına gir |
 | E | Kutuyu al / bırak |
 | F | İş noktasında çalış |
-| X | Suçlu: ortak öldürme hakkı |
+| Q | Suçlu: ortak öldürme hakkı |
 | M | Küçük haritayı büyüt / küçült |
 | Tab | Skor tablosu / izleyicide hedef değiştir |
 | Esc | Duraklat (rol seçimi Esc ile kapanmaz) |

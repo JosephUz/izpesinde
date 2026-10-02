@@ -77,7 +77,7 @@ export function createUI(root, app, hooks) {
   function actionBar(p) {
     if (actionRole === p.role) return;
     actionRole = p.role;
-    const choices = [['SOL', USE_LABEL[p.role], 'use'], ...(p.role === 'criminal' ? [['X', 'Öldür', 'kill']] : []), ['E', 'Kutu', 'carry'], ['F', 'Çalış', 'blend'], ['SPACE', 'Zıpla', 'jump'], ['SAĞ', 'Atıl', 'dash']];
+    const choices = [['SOL', USE_LABEL[p.role], 'use'], ...(p.role === 'criminal' ? [['Q', 'Öldür', 'kill']] : []), ['E', 'Kutu', 'carry'], ['F', 'Çalış', 'blend'], ['SPACE', 'Zıpla', 'jump'], ['SAĞ', 'Atıl', 'dash']];
     els.actions.innerHTML = choices.map(([key, label, type]) => `<button data-action="${type}" title="${label}"><kbd>${key}</kbd><span>${label}</span></button>`).join('');
     els.actions.querySelectorAll('button').forEach(b => { b.onclick = () => (b.dataset.action === 'use' ? toast('Hedefi dünyada sol tıkla seç.') : hooks.command(b.dataset.action)); });
   }

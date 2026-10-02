@@ -1,6 +1,6 @@
 // Tarayıcı dumanı testi: çalışan sunucuya (GAME_URL, varsayılan http://127.0.0.1:5197) başsız Chromium ile bağlanır.
 // Menü, rol seçimi, yürüme, çift zıplama, görüş sisi, duraklatma, gerçek sol tıkla işaret / yakalama / kılık, kenar
-// uyarısı, E ile kutu, görüş alanındaki sabit nesnelerin saydamlığı, iz oku, skor tablosu, küçük ekran ve beş turun ekran geçişleri denetlenir.
+// uyarısı, E ile kutu, Q ile öldürme, görüş alanındaki sabit nesnelerin saydamlığı, iz oku, skor tablosu, küçük ekran ve beş turun ekran geçişleri denetlenir.
 // Ekran görüntüleri artifacts/ altına. Playwright yolu: PLAYWRIGHT_MODULE (npm test bunu kendisi bulur).
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -96,6 +96,11 @@ try {
   assert.ok(fades.others <= 3, 'diğer nesneler katı kalır (' + fades.others + ')');
   await page.screenshot({ path: 'artifacts/seethrough.png' });
 
+  // Suçlu Q ile yanındaki kişiyi öldürür (ortak hak bir azalır).
+  await game(() => { window.__iz.setRole('criminal'); const w = window.__iz.world, p = w.player, n = w.actors[31]; n.x = p.x + 1.5; n.z = p.z; });
+  await page.keyboard.press('KeyQ'); await page.waitForTimeout(150);
+  assert.equal(await game(() => window.__iz.world.actors[31].alive), false, 'Q öldürür');
+  assert.equal(await game(() => window.__iz.world.killsLeft), 1);
   // M küçük haritayı büyütür, tekrar M küçültür.
   const mapWidth = async () => (await page.locator('#mapcard').boundingBox()).width;
   const small = await mapWidth();

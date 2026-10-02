@@ -5,7 +5,7 @@ import { dist } from './physics.js';
 import { active, canAct, contestants, emit, nearest, sees } from './roster.js';
 
 /**
- * Yalnızca suçluların eylemleri: kılık değiştirme (sol tık) ve ortak cinayet hakkı (X).
+ * Yalnızca suçluların eylemleri: kılık değiştirme (sol tık) ve ortak cinayet hakkı (Q).
  *
  * Kılık: tıklanan yakın karakterin kıyafetini ve şapkasını kopyalar; sınırsızdır ama her değişim −1. İşaret kalkar.
  * Değişimi gören dedektif takibi sürdürür (ve yalnızca suçlular kılık değiştirdiği için kesinleşir); görmeyenler kaybeder.

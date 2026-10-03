@@ -1,6 +1,6 @@
 import { CFG, ROLE } from './config.js';
 import { crateNear } from './crowd.js';
-import { circleOf, markBy, marksFor } from './marks.js';
+import { circleOf, markBy, marksFor, revealedProsecutors } from './marks.js';
 import { dist, visible } from './physics.js';
 import { active, criminals } from './roster.js';
 import { objectiveOf } from './screens.js';
@@ -14,9 +14,10 @@ import { spectate } from './world.js';
  * kalır, giriş animasyonu bir kez oynar), etiketler havuzdan gelir ve her karede yalnızca konumları güncellenir.
  * update() ~11 kez/sn, labels() her karede çağrılır.
  */
-const USE_LABEL = { detective: 'İşaretle', prosecutor: 'Yakala', criminal: 'Kılığına gir' };
-const USE_RANGE = { detective: CFG.markRange, prosecutor: CFG.catchRange, criminal: CFG.disguiseRange };
+const USE_LABEL = { detective: 'İşaretle', prosecutor: 'Yakala', criminal: 'Öldür' };
+const USE_RANGE = { detective: CFG.markRange, prosecutor: CFG.catchRange, criminal: CFG.reach };
 const signed = n => (n > 0 ? '+' : '') + n;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const clock = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 function setHTML(el, html) { if (el._html !== html) { el._html = html; el.innerHTML = html; } }
@@ -61,7 +62,8 @@ export function createUI(root, app, hooks) {
 
   /** Son 13 saniyenin en fazla 3 olayı; mevcut girişler DOM'da kalır. */
   function eventLog(world) {
-    const shown = world.events.filter(e => world.time - e.time < 13).slice(-3), ids = new Set(shown.map(e => String(e.id)));
+    const me = world.player.id, mine = world.events.filter(e => e.to == null || e.to === me);
+    const shown = mine.filter(e => world.time - e.time < 13).slice(-3), ids = new Set(shown.map(e => String(e.id)));
     for (const el of [...els.log.children]) if (!ids.has(el.dataset.id)) el.remove();
     const have = new Set([...els.log.children].map(el => el.dataset.id));
     for (const e of shown) {
@@ -70,28 +72,29 @@ export function createUI(root, app, hooks) {
       el.className = 'event ' + e.kind; el.dataset.id = e.id; el.innerHTML = e.text;
       els.log.append(el);
     }
-    const last = world.events.at(-1);
+    const last = mine.at(-1);
     if (last && last.id !== lastSound) { lastSound = last.id; tone(last.kind === 'danger' ? 150 : 520, 0.16); }
   }
 
   function actionBar(p) {
     if (actionRole === p.role) return;
     actionRole = p.role;
-    const choices = [['SOL', USE_LABEL[p.role], 'use'], ...(p.role === 'criminal' ? [['Q', 'Öldür', 'kill']] : []), ['E', 'Kutu', 'carry'], ['F', 'Çalış', 'blend'], ['SPACE', 'Zıpla', 'jump'], ['SAĞ', 'Atıl', 'dash']];
+    const choices = [['SOL', USE_LABEL[p.role], 'use'], ...(p.role === 'criminal' ? [['Q', 'Kılık', 'swap']] : []), ['E', 'Kutu', 'carry'], ['F', 'Çalış', 'blend'], ['SPACE', 'Zıpla', 'jump'], ['SAĞ', 'Atıl', 'dash']];
     els.actions.innerHTML = choices.map(([key, label, type]) => `<button data-action="${type}" title="${label}"><kbd>${key}</kbd><span>${label}</span></button>`).join('');
-    els.actions.querySelectorAll('button').forEach(b => { b.onclick = () => (b.dataset.action === 'use' ? toast('Hedefi dünyada sol tıkla seç.') : hooks.command(b.dataset.action)); });
+    els.actions.querySelectorAll('button').forEach(b => { b.onclick = () => (b.dataset.action === 'use' || b.dataset.action === 'swap' ? toast('Hedefi dünyada imleçle seç.') : hooks.command(b.dataset.action)); });
   }
 
   function metrics(world, p) {
-    if (p.role === 'criminal') return `Serbest süre: <b>${clock(world.time)}</b> · dakikası +1<br>Ortak öldürme hakkı: ${world.killsLeft || 'TÜKENDİ'}${world.marks.has(0) ? '<br><b class="warn">İŞARETLENDİN · KILIK DEĞİŞTİR</b>' : ''}`;
-    if (p.role === 'prosecutor') return `Yakalama hakkın: <b>${p.catches} / ${CFG.catches}</b><br>Haritadaki işaret: <b>${marksFor(world, p).filter(m => !m.cleared).length}</b>`;
+    if (p.role === 'criminal') return `Serbest süre: <b>${clock(world.time)}</b> · dakikası +1<br>Sol tık öldürür · Q kılık (−1)${world.marks.has(p.id) ? '<br><b class="warn">İŞARETLENDİN · KILIK DEĞİŞTİR</b>' : ''}`;
+    if (p.role === 'prosecutor') return `Yakalama: <b>sınırsız</b> · yanlışı −1<br>${world.revealed.get(p.id) > world.time ? `<b class="warn">KİMLİĞİN AÇIK · ${Math.ceil(world.revealed.get(p.id) - world.time)} SN</b>` : `Haritadaki işaret: <b>${marksFor(world, p).filter(m => !m.cleared).length}</b>`}`;
     return `İşaret hakkın: <b>${p.marks} / ${CFG.marks}</b><br>Aktif işaretin: <b>${markBy(world, p.id) !== null ? 'Var' : 'Yok'}</b>`;
   }
 
   function context(world, p) {
     const hover = app.hover, work = world.env.work.find(w => dist(p, w) < 4);
     if (!active(p)) return '';
-    if (hover) return dist(p, hover) <= USE_RANGE[p.role] ? `<kbd>SOL TIK</kbd> ${USE_LABEL[p.role]}${p.role === 'criminal' ? ' (−1)' : ''}` : `${USE_LABEL[p.role]} için yaklaş`;
+    if (hover && p.role === 'criminal') return (dist(p, hover) <= CFG.reach ? '<kbd>SOL TIK</kbd> Öldür · ' : '') + (dist(p, hover) <= CFG.disguiseRange ? '<kbd>Q</kbd> Kılığına gir (−1)' : 'Kılık için yaklaş');
+    if (hover) return dist(p, hover) <= USE_RANGE[p.role] ? `<kbd>SOL TIK</kbd> ${USE_LABEL[p.role]}` : `${USE_LABEL[p.role]} için yaklaş`;
     if (p.crate !== null) return '<kbd>E</kbd> Kutuyu bırak';
     if (crateNear(world, p)) return '<kbd>E</kbd> Kutuyu al · Kalabalığa karış';
     if (work) return '<kbd>F</kbd> ' + work.job.replace('yor', '') + ' · Kalabalığa karış';
@@ -104,27 +107,29 @@ export function createUI(root, app, hooks) {
       const world = app.world, p = world.player;
       actionBar(p);
       els.round.textContent = `TUR ${String(world.round).padStart(2, '0')} / ${String(CFG.rounds).padStart(2, '0')}`;
-      els.timer.textContent = clock(Math.max(0, Math.ceil(CFG.seconds - world.time)));
-      els.score.textContent = world.scores[0] + ' PUAN' + (world.tally[0] ? ` · BU TUR ${signed(world.tally[0])}` : '');
+      els.timer.textContent = clock(Math.max(0, Math.ceil(world.seconds - world.time)));
+      els.score.textContent = world.scores[p.id] + ' PUAN' + (world.tally[p.id] ? ` · BU TUR ${signed(world.tally[p.id])}` : '');
       els.role.textContent = ROLE[p.role]; els.objective.textContent = objectiveOf(p.role);
       setHTML(els.metrics, metrics(world, p));
-      const crims = criminals(world), law = world.actors.slice(0, 10).filter(a => a.role !== 'criminal');
-      setHTML(els.clues, crims.map(c => (active(c) ? '<span title="Serbest">◇</span>' : '<span class="processed" title="Yakalandı">✓</span>')).join(''));
-      els.status.textContent = `Serbest suçlu ${crims.filter(active).length}/2 · Kanunun işareti ${law.filter(a => a.alive).reduce((n, a) => n + a.marks, 0)} · yakalaması ${law.filter(a => a.alive).reduce((n, a) => n + a.catches, 0)}`;
+      // Çevrim içi kopyada roller gizli: serbest suçlu bayrakları ve kanunun kalan işaret hakkı sunucudan gelir.
+      const free = world.remote ? world.crim.map(Boolean) : criminals(world).map(active);
+      const lawMarks = world.remote ? world.lawMarks : world.actors.slice(0, 10).filter(a => a.role !== 'criminal' && a.alive).reduce((n, a) => n + a.marks, 0);
+      setHTML(els.clues, free.map(f => (f ? '<span title="Serbest">◇</span>' : '<span class="processed" title="Yakalandı">✓</span>')).join(''));
+      els.status.textContent = `Serbest suçlu ${free.filter(Boolean).length}/2 · Kanunun işareti ${lawMarks}`;
       eventLog(world);
       // Kalabalık geçerken ipucu hızla değişmesin: imleçte hedef yoksa her ipucu en az 0,45 sn kalır.
       const hint = context(world, p), now = performance.now();
       if (hint !== els.context._html && (app.hover || !hint || now - contextAt > 450)) { contextAt = now; setHTML(els.context, hint); }
-      els.alert.classList.toggle('on', p.role === 'criminal' && world.marks.has(0) && active(p));
+      els.alert.classList.toggle('on', p.role === 'criminal' && world.marks.has(p.id) && active(p));
       for (const type of ['dash', 'use']) {
-        const off = type === 'dash' ? p.dashCd > 0 : p.role === 'criminal' ? p.disguiseCd > 0 : p.role === 'detective' ? p.marks <= 0 : p.catches <= 0;
+        const off = type === 'dash' ? p.dashCd > 0 : p.role === 'criminal' ? p.killCd > 0 : p.role === 'detective' ? p.marks <= 0 : false;
         els.actions.querySelector(`[data-action="${type}"]`)?.classList.toggle('cooldown', off);
       }
       els.spectator.hidden = active(p);
       if (!active(p)) {
         const t = spectate(world, app.spectator);
         app.spectator = t?.id || 0;
-        setHTML(els.spectator, t ? `${p.caught ? 'Yakalandın' : 'Öldürüldün'} · ${t.name} izleniyor · Tab: kamera değiştir` : 'Bu tur elendin. Olay kamerasından izliyorsun.');
+        setHTML(els.spectator, t ? `${p.caught ? 'Yakalandın' : 'Öldürüldün'} · ${esc(t.name)} izleniyor · Tab: kamera değiştir` : 'Bu tur elendin. Olay kamerasından izliyorsun.');
       }
     },
     /** Dünya etiketleri ve savcı okları; görüş hattı yalnızca refreshSight karelerinde yenilenir (pahalı). */
@@ -132,16 +137,19 @@ export function createUI(root, app, hooks) {
       if (!app.playing) return;
       const world = app.world, p = world.player, eyes = spectate(world, app.spectator) || p;
       const marks = new Map(marksFor(world, p).map(m => [m.target.id, m])), labels = [], arrows = [];
-      if (refreshSight) sight = new Map(world.actors.filter(a => marks.has(a.id) || p.known.has(a.id)).map(a => [a.id, visible(world.env, eyes, a)]));
+      // Suçlunun gözünde ele verilmiş savcılar da etiketlenir (hedef olsunlar).
+      const exposed = new Set(p.role === 'criminal' ? revealedProsecutors(world).map(a => a.id) : []);
+      if (refreshSight) sight = new Map(world.actors.filter(a => marks.has(a.id) || p.known.has(a.id) || exposed.has(a.id)).map(a => [a.id, visible(world.env, eyes, a)]));
       for (const a of world.actors) {
         if (a === p || !active(a)) continue;
-        const known = p.known.has(a.id), mark = marks.get(a.id);
-        if ((!known && !mark) || dist(a, eyes) > CFG.vision) continue;
+        const known = p.known.has(a.id), mark = marks.get(a.id), target = exposed.has(a.id);
+        if ((!known && !mark && !target) || dist(a, eyes) > CFG.vision) continue;
         const point = app.project(a.x, 3.3 + a.y, a.z);
         if (!point.inside || (!known && !sight.get(a.id))) continue;
+        if (target) { labels.push({ cls: 'world-label danger', html: '⚖ SAVCI', x: point.x, y: point.y }); continue; }
         labels.push(mark
           ? { cls: 'world-label ' + (mark.cleared ? 'cleared' : 'mark'), html: mark.cleared ? 'Aklandı' : '◎ İşaretli', x: point.x, y: point.y }
-          : { cls: 'world-label', html: ROLE[a.role] + ' · ' + a.name, x: point.x, y: point.y });
+          : { cls: 'world-label', html: ROLE[a.role] + ' · ' + esc(a.name), x: point.x, y: point.y });
       }
       if (p.role === 'prosecutor' && active(p)) {
         for (const m of marks.values()) {

@@ -1,14 +1,15 @@
 # İz Peşinde
 
-Three.js ile tarayıcıda çalışan, tek oyunculu, izometrik bir **ortaçağ gizli kimlik** oyunu. Karaağaç kasabasında
-10 yarışmacı (sen + 9 bot) ve 170 kasabalı dolaşır. Her tur rolünü seçersin: **suçlu** kalabalığa karışıp süre bitene
+Three.js ile tarayıcıda çalışan, izometrik bir **ortaçağ gizli kimlik** oyunu: tek başına botlara karşı ya da
+**çevrim içi odada** arkadaşlarla. Karaağaç kasabasında 10 yarışmacı ve 170 kasabalı dolaşır. Tek başına her tur
+rolünü seçersin, odada roller her tur rastgele gelir: **suçlu** kalabalığa karışıp süre bitene
 kadar yakalanmamaya, **dedektif** izleri okuyup şüpheliyi işaretlemeye, **savcı** izlerin ve işaretlerin peşinden
 doğru kişiyi yakalamaya çalışır. Beş turun sonunda en yüksek kişisel skor kazanır.
 
 Kuralların tamamı ve gerekçeleri: [DEDEKTIF_OYUNU_TASARIM.md](DEDEKTIF_OYUNU_TASARIM.md). Görsel dil ve kod düzeni
 [Çayır Muhafızı](https://github.com/JosephUz/cayirmuhafizi) ile aynıdır.
 
-**Kaynak**: https://github.com/JosephUz/izpesinde
+**Oyna**: https://izpesinde.josephuz.com · **Kaynak**: https://github.com/JosephUz/izpesinde
 
 ## Başlatma
 
@@ -17,29 +18,55 @@ Alternatif: bu klasörde `npm install` ve `npm start`, ardından http://127.0.0.
 Node.js gerekir; ilk kurulumdan sonra internet bağlantısı gerekmez. Port için PowerShell'de `$env:PORT=5198; npm start`.
 
 **Docker ile (compose)**: `docker compose up -d --build`; oyun http://localhost:5197 adresinde, yalnızca bu bilgisayara
-açık (`127.0.0.1`). Oyun tek oyunculu olduğu için tünel ve oyun sunucusu yoktur. Kaynak değişince yine `--build` yeter.
+açık (`127.0.0.1`). Kaynak değişince yine `--build` yeter. **İnternete açmak** için `docker compose --profile tunnel up -d --build`:
+`cloudflared` konteyneri `.env` dosyasındaki `TUNNEL_TOKEN` ile tünele bağlanır, oyunun ağ alanını paylaşır; Cloudflare
+panelindeki rota `izpesinde-sunucu.josephuz.com` → `http://localhost:5197`.
 Konteyner açıkken `Baslat.cmd` ikinci bir sunucu açmaz, çalışanı bulup tarayıcıyı ona açar.
 Sunucu oyun dosyalarını `no-store` ile verir; `/health` yanıtı ayakta olan yapının damgasını içerir.
 
 **Web yayını**: `npm run deploy:web` dosyaları `dist/` klasörüne toplayıp Cloudflare Worker'a
-(`izpesinde.josephuz.com`, bkz. `wrangler.jsonc`) gönderir.
+(`izpesinde.josephuz.com`, bkz. `wrangler.jsonc`) gönderir. İstemci değişikliği canlıya ancak böyle gider; sunucu
+değişikliği `docker compose --profile tunnel up -d --build` ile. Statik sitedeki istemci `src/config.js → SERVER`
+(`izpesinde-sunucu.josephuz.com`) adresine bağlanır; sunucuya bağlanamadıkça oda düğmeleri **YAKINDA** yazar, tek
+başına oyun aynen oynanır.
+
+## Çevrim içi oda
+
+Menüde adını yaz, **Oda kur** de; çıkan kodu ya da "Linki kopyala" ile `?oda=KOD` linkini arkadaşlarına yolla.
+Lobide 10 koltuk vardır, **taraf yoktur**: gelen boş koltuğa oturur, boş bir koltuğa tıklayan oraya geçer, boş
+koltukları botlar doldurur. Botların zorluğunu ve Başlat'ı kuran seçer. **Rol seçimi yoktur**, her tur herkes
+rastgele rol alır. Tur akışı sunucunun saatiyle: 6 sn giriş (kimse kıpırdamaz) → 6 dk oyun → 12 sn tur sonu
+tablosu → sonraki tur; beşinci turdan sonra oda lobiye döner. Esc menüsü oyunu durdurmaz.
+
+- **Sunucu otoriterdir** (`server/rooms.mjs`): her oda kendi dünyasını saniyede 20 adım koşturur, 10 Hz paket yollar.
+  Karakter paketi ikilidir ve herkese aynıdır (180 karakter ~1,6 KB: konum, yön, görünüş, bayraklar; rol yok).
+- **Kişiye özel durum** (`src/net/visibility.js`): roller yalnızca tanıdıklar için, izler yalnızca kendi rolünün ve
+  görüş alanının, ele verilen savcılar yalnızca suçlulara, özel bildirimler yalnızca sahibine gider. Konsoldan bakan
+  oyuncu ekranında göremeyeceği bir şeyi paketlerde de bulamaz.
+- **İstemci** (`src/net/client.js`) dünyanın kopyasını kurar; sahne, arayüz ve harita tek başına oyunun koduyla
+  çizer. Başkaları 0,1 sn geriden ara değerle, kendi karakterin yerel girdiden üretilen ileri kaymayla anında yürür.
+- **Kopma**: kimlik sekmeye özel bir token'dır; sayfa yenilenince ya da bağlantı kopunca aynı koltuğa dönülür.
+  Koparken karakterini bot yönetir, dönünce sana geçer. Bağlı kimse kalmayınca oda kapanır.
+- `/health`: `{ oyun, rooms, online, inRoom, surum }`; `online` siteyi açık tutan sekme sayısıdır (menünün alt
+  bilgisinde "● N çevrim içi", josephuz.com'da da görünür).
 
 ## Bir tur
 
-1. **Rol seçimi**: üç karttan birini seç. Botlar kalan rolleri paylaşır; her tur 2 suçlu, 6 dedektif, 2 savcı vardır.
+1. **Rol seçimi** (tek başına): üç karttan birini seç. Botlar kalan rolleri paylaşır; her tur 2 suçlu, 6 dedektif,
+   2 savcı vardır. Çevrim içi odada rol rastgele gelir.
 2. Suç zaten işlenmiştir; tur 6 dakikalık geri sayımla ilerler. Yarışmacılar haritanın farklı yerlerinde başlar.
 3. Herkes yalnızca çevresindeki daireyi görür; dışı kararır. Küçük haritada ise herkes aynı renkte nokta olarak
    görünür: kim olduğu belli değildir ama tenhaya sapan biri fark edilir. Biri (oyuncu, bot ya da kasabalı) bir evin, tezgâhın ya da
    ağacın arkasına geçince o nesne saydamlaşır.
 4. Suçlular arkalarında 2 saniyelik izler bırakır: dedektif izini yalnızca dedektifler, savcı izini yalnızca savcılar
-   görür; ikisi de suçlunun birkaç saniye önceki yerine düşer. Düşen izin üstünde zıplayan bir ok belirir. İz aralığı
-   ve gecikmesi birlikte kısalır: 5 → 4 → 3 sn, son dakikada 2 sn.
-5. Dedektif şüpheliyi sol tıkla işaretler (3 hak); işaretin yaklaşık bölgesi savcıların haritasına düşer; işaret bir suçlunun üstündeyse
-   herkes görür, diğer dedektifler de o suçluya odaklanır. Savcı doğru
-   kişiyi sol tıkla yakalar (3 hak). İşaretlenen suçlunun ekran kenarı kızarır; sol tıkla birinin kılığına girerse
-   (−1) işaret kalkar.
-6. Tur biter: iki suçlu yakalanırsa kanun kazanır. Süre dolarsa, iki savcı da ölürse ya da kanunun hakları tükenirse
-   suçlular kazanır.
+   görür; ikisi de suçlunun birkaç saniye önce tam bastığı noktaya, yürüyüş yönüne bakan bir çift ayak izi olarak düşer.
+   Düşen izin üstünde zıplayan bir ok belirir. İz aralığı 5 → 4 → 3 → 2 sn, gecikme 5 → 4 → 3 → 2 → 1 sn kısalır.
+5. Dedektif şüpheliyi sol tıkla işaretler (3 hak); işareti ve yaklaşık bölgesini herkes görür. Savcı doğru kişiyi
+   sol tıkla yakalar: yakalama sınırsız ama yanlışı −1 ve her denemede savcının kimliği 10 sn suçlulara açılır.
+   İşaretlenen suçlunun ekran kenarı kızarır; imleçteki birinin kılığına Q ile girerse (−1) işaret kalkar. Suçlu
+   imleçteki kişiyi sol tıkla öldürür (sınırsız).
+6. Tur biter: iki suçlu yakalanırsa kanun kazanır. Süre dolarsa, iki savcı da ölürse ya da dedektiflerin işaret
+   hakları boşa tükenirse suçlular kazanır.
 
 ## Tuşlar
 
@@ -49,13 +76,13 @@ Sunucu oyun dosyalarını `no-store` ile verir; `/health` yanıtı ayakta olan y
 | Shift | Koş |
 | Space, havadayken tekrar | Zıpla, çift zıpla |
 | Sağ tık | Atıl |
-| Sol tık | İmlecin altındaki kişi: dedektif işaretler, savcı yakalar, suçlu kılığına girer |
+| Sol tık | İmlecin altındaki kişi: dedektif işaretler, savcı yakalar, suçlu öldürür |
 | E | Yakındaki kutuyu al / bırak |
 | F | İş noktasında çalış |
-| Q | Suçlu: ortak öldürme hakkı (turda 2) |
+| Q | Suçlu: imleçteki kişinin kılığına gir (−1) |
 | M | Küçük haritayı büyüt / küçült |
 | Tab | Basılı: skor; elenince: izlenen takım arkadaşını değiştir |
-| Esc | Duraklat / devam |
+| Esc | Duraklat / devam (çevrim içi odada oyun durmaz) |
 
 Ses sağ üstteki düğmeden açılır (başlangıçta kapalı).
 
@@ -67,17 +94,22 @@ Ses sağ üstteki düğmeden açılır (başlangıçta kapalı).
 | Suçlular kazanır | Serbest kalan her suçlu +5 |
 | Serbest geçen her tam dakika | Suçluya +1, kazansa da kaybetse de |
 | Doğru yakalama | Savcıya +1, o kişide aktif işareti olan dedektife +1 |
-| Yanlış yakalama / suçlu olmayanı işaretleme | −1 (yanlış işaret tur sonunda yazılır) |
+| Yanlış yakalama / suçlu olmayanı işaretleme | −1 (yakalama sınırsız; yanlış işaret tur sonunda yazılır) |
 | Kılık değiştirme | −1 |
 | NPC / dedektif / savcı öldürme | −1 / +1 / +2 |
 
 ## Testler
 
-`npm test`: önce başsız kural testleri (`tests/rules-smoke.mjs`: rol dağıtımı ve seçimi, iz takvimi ve iki iz türü,
-işaret ve yakalama, hak tükenmesi, kılık, cinayet ve iki savcının ölümü, puanlar, kutu, zıplama/iniş, izleyici, beş
-turluk otomatik maç), sonra sunucuyu boş bir portta açıp başsız Chromium ile duman testi (`tests/browser-smoke.mjs`:
-menü, rol seçimi, hareket, görüş sisi, duraklatma, gerçek sol tıkla işaret / yakalama / kılık, kenar uyarısı, kutu,
-sabit nesne saydamlığı, iz oku, skor tablosu, küçük ekran, beş tur geçişi). Playwright bu depoya kurulmaz; komşu depolardaki kurulum
+`npm test`: önce başsız kural testleri (`tests/rules-smoke.mjs`: rol dağıtımı ve seçimi, iz takvimi, izin tam basılan
+noktaya düşmesi ve iki iz türü, işaret ve yakalama, hak tükenmesi, kılık, cinayet ve iki savcının ölümü, puanlar, kutu,
+zıplama/iniş, izleyici, çok insanlı dünya, çevrim içi paketin gizli bilgi taşımaması, beş turluk otomatik maç). Sonra
+sunucuyu boş bir portta açar (testte tur 25 sn, `IZ_TUR_SN`): çevrim içi duman testi (`tests/online-smoke.mjs`, iki
+WebSocket istemcisi: lobi, koltuk, gizli roller, giriş evresi, hareket, kopup geri dönme, ayrılma), başsız Chromium ile
+tek başına duman testi (`tests/browser-smoke.mjs`: menü, rol seçimi, hareket, görüş sisi, duraklatma, gerçek sol tıkla
+işaret / yakalama / kılık, kenar uyarısı, kutu, sabit nesne saydamlığı, iz oku, skor tablosu, küçük ekran, beş tur
+geçişi) ve iki tarayıcıyla çevrim içi test (`tests/online-browser.mjs`: oda kur, linkle katıl, koltuk, başlat, tur
+girişi, hareket ve öbür ekranda aynı yer, tur sonu, ikinci tur, menü, çıkış). `online-smoke.mjs` canlı sunucuya da
+koşturulabilir: `GAME_URL=https://izpesinde-sunucu.josephuz.com node tests/online-smoke.mjs`. Playwright bu depoya kurulmaz; komşu depolardaki kurulum
 bulunur (bkz. `scripts/test.mjs`). Ekran görüntüleri `artifacts/` altına yazılır.
 
 ## Dosyalar
@@ -90,10 +122,10 @@ yetkili adımda bütün kurallar işler. İstemci modülleri dünyayı yalnızca
 | `index.html`, `style.css` | Tam ekran düzen: sahne, HUD, rol kartı, harita, eylem çubuğu, ekranlar |
 | `game.js` | Giriş; `src/main.js`'i yükler (import map: `three` → `/vendor/three.module.js`) |
 | `src/config.js` | Tüm ayar sayıları: tur, hız, görüş, iz takvimi, haklar, puanlar, zorluk, kamera, saydamlık |
-| `src/world.js` | **Simülasyon**: dünya, tur kurulumu (oyuncunun seçtiği rol + rastgele kalan roller), sabit adım, sol tık eylemi, izleyici |
-| `src/marks.js` | Dedektif işareti, savcı yakalaması, işaret görünürlüğü ve haritadaki daire, hak tükenmesi bitişleri |
-| `src/criminal.js` | Suçlu eylemleri: kılık değiştirme, ortak cinayet hakkı |
-| `src/traces.js` | İz kaydı, zaman takvimine göre iki tür iz, bot dedektif / savcıların iz algısı |
+| `src/world.js` | **Simülasyon**: dünya (bir ya da çok insan), tur kurulumu (seçilen rol ya da herkese rastgele), sabit adım, sol tık eylemi, izleyici |
+| `src/marks.js` | Dedektif işareti, savcı yakalaması ve ele verilmesi, haritadaki daire, hak tükenmesi bitişi |
+| `src/criminal.js` | Suçlu eylemleri: kılık değiştirme (Q), öldürme (sol tık) |
+| `src/traces.js` | İz kaydı, zaman takvimine göre iki tür iz (tam basılan nokta ve yön), bot dedektif / savcıların iz algısı |
 | `src/crowd.js` | Hareket, zıplama, atılma, kutu taşıma, çalışma, kasabalı rutinleri ve rota izleme |
 | `src/ai.js` | Bot kararları: dedektif (şüphe, takip, işaret), savcı (daire, iz, yakalama), suçlu (kalabalık, kılık, cinayet) |
 | `src/score.js` | Tur sonu ve puan toplama |
@@ -101,20 +133,23 @@ yetkili adımda bütün kurallar işler. İstemci modülleri dünyayı yalnızca
 | `src/physics.js` | Çarpışma, görüş hattı, güvenli iniş, ızgara + ikili yığınla A* yol bulma |
 | `src/environment.js` | Kasaba verisi (bölgeler, binalar, ağaçlar, iş noktaları, kutular) ve 3B kurulumu |
 | `src/rng.js` | Tohumlu rastgelelik |
-| `src/main.js` | **İstemci**: sahne, kamera, ışık, oyun akışı (menü → rol seçimi → tur → sonuç), çizim döngüsü, test kancası |
-| `src/screens.js` | Rol seçimi, tur girişi, kontroller, duraklatma, tur / maç sonu, skor tablosu |
+| `src/main.js` | **İstemci**: sahne, kamera, ışık, oyun akışı (tek başına: menü → rol seçimi → tur → sonuç; çevrim içi: oda → lobi → turlar), çizim döngüsü, test kancası |
+| `src/net/` | Çevrim içi: ortak sözlük (`protocol.js`), ikili karakter paketi (`snapshot.js`), kişiye özel durum (`visibility.js`), istemci: bağlantı, kopya dünya, ara değer, ileri kayma, girdi (`client.js`) |
+| `src/platform.js` | Sunucu adresi (statik sitede `SERVER`, yerelde aynı adres) |
+| `server/rooms.mjs` | Odalar: lobi ve koltuklar, otoriter dünya, tur akışı, kopma / geri dönme, çevrim içi sayısı |
+| `src/screens.js` | Rol seçimi, çevrim içi lobi, tur girişi, kontroller, duraklatma, tur / maç sonu, skor tablosu |
 | `src/ui.js` | HUD, olay günlüğü, bağlam ipucu, eylem çubuğu, dünya etiketleri, savcı okları, kenar uyarısı, ses |
 | `src/input.js` | Klavye / fare, imleçle hedef seçme |
 | `src/minimap.js` | Üstten 2B harita: kasaba, herkesin konumu (kimliksiz nokta), işaret daireleri, görüş çemberi |
 | `src/characters.js` | Kutu karakterler, instancing ile toplu çizim, ayak halkaları, imleç hedefi |
 | `src/fog.js` | Görüş sisi (three'nin sis parçaları karakter çevresi uzaklığına göre yeniden yazılır) |
-| `src/view/` | Mesh takımı ve birleştirme (`meshes.js`), iz, iz oku ve olay efektleri (`effects.js`), kutular (`itemview.js`), arkasına biri geçen sabit nesnenin saydamlığı (`seethrough.js`) |
+| `src/view/` | Mesh takımı ve birleştirme (`meshes.js`), ayak izleri, iz oku ve olay efektleri (`effects.js`), kutular (`itemview.js`), arkasına biri geçen sabit nesnenin saydamlığı (`seethrough.js`) |
 | `scripts/test.mjs`, `scripts/build-web.mjs` | Test koşturucusu; web yayını için `dist/` |
-| `Dockerfile`, `compose.yaml`, `.dockerignore` | Konteyner: tek imaj, sağlık denetimi, yalnızca bu bilgisayara açık port |
-| `server.mjs` | Statik dosyalar, three /vendor/ altından, `no-store`, `/health` |
+| `Dockerfile`, `compose.yaml`, `.dockerignore` | Konteyner: tek imaj, sağlık denetimi, yalnızca bu bilgisayara açık port; `tunnel` profili ile cloudflared |
+| `server.mjs` | Tek port: statik dosyalar (three /vendor/ altından, `no-store`), WebSocket odaları (Origin denetimi: aynı adres, *.josephuz.com, localhost), `/health` |
 
 ## Sınırlar
 
-Çok oyunculu, kayıtlı maç ve dokunmatik kontrol yoktur. Görüş alanı çiziminde binalar görüşü kesmez (botların algısında
-görüş hattı vardır). Bot dengesi ilk ayardadır; otomatik maçlarda kanun 20 turun 9’unu kazanıyor, yakalamalar çoğunlukla 1,5–5. dakikada geliyor. Oynanışa
+Hesap, kayıtlı maç, yabancılarla eşleştirme ve dokunmatik kontrol yoktur. Görüş alanı çiziminde binalar görüşü kesmez (botların algısında
+görüş hattı vardır). Bot dengesi ilk ayardadır; otomatik maçlarda kanun 20 turun 11’ini kazanıyor; suçluların galibiyetlerinin çoğu iki savcıyı öldürerek geliyor. Oynanışa
 göre `LEVELS` ve `CFG.trace` değerleri ayarlanmalıdır.

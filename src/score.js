@@ -5,7 +5,7 @@ import { active, contestants } from './roster.js';
  * Tur sonu ve puanlar. Tur içindeki ödül ve cezalar world.tally'de (oyuncuya görünür) ve world.hidden'da (yanlış
  * işaret: tur sonuna kadar gizli) birikir; burada bir kez toplanıp skora eklenir.
  *  - capture (iki suçlu yakalandı): her dedektif ve savcı +1.
- *  - timeout / rights / marks / prosecutors: suçlular kazanır, serbest kalan her suçlu +5.
+ *  - timeout / marks / prosecutors: suçlular kazanır, serbest kalan her suçlu +5.
  *  - Suçluya serbest geçen her tam dakika +1 (kazansa da kaybetse de).
  */
 export function finish(world, kind) {

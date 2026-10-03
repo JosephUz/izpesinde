@@ -1,6 +1,6 @@
 // Tarayıcı dumanı testi: çalışan sunucuya (GAME_URL, varsayılan http://127.0.0.1:5197) başsız Chromium ile bağlanır.
 // Menü, rol seçimi, yürüme, çift zıplama, görüş sisi, duraklatma, gerçek sol tıkla işaret / yakalama / kılık, kenar
-// uyarısı, E ile kutu, Q ile öldürme, görüş alanındaki sabit nesnelerin saydamlığı, iz oku, skor tablosu, küçük ekran ve beş turun ekran geçişleri denetlenir.
+// uyarısı, E ile kutu, suçlunun Q ile kılığı ve sol tıkla öldürmesi, görüş alanındaki sabit nesnelerin saydamlığı, iz oku, skor tablosu, küçük ekran ve beş turun ekran geçişleri denetlenir.
 // Ekran görüntüleri artifacts/ altına. Playwright yolu: PLAYWRIGHT_MODULE (npm test bunu kendisi bulur).
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -37,11 +37,12 @@ try {
 
   // Görüş alanı: sis oyuncunun çevresine kapanır, dairenin dışındaki karakterler çizilmez.
   const vision = await game(() => {
-    const w = window.__iz.world, p = w.player; let far = 0, drawn = 0;
-    for (const a of w.actors) if (Math.hypot(a.x - p.x, a.z - p.z) > 20) { far++; if (window.__iz.characters.isDrawn(a.id)) drawn++; }
-    return { near: window.__iz.app.fogNear(), far, drawn };
+    // Sis iç yarıçapı görüşün 3 birim içidir; görüşün 1 birim dışındaki kimse çizilmemeli.
+    const w = window.__iz.world, p = w.player, near = window.__iz.app.fogNear(), edge = near + 4; let far = 0, drawn = 0;
+    for (const a of w.actors) if (Math.hypot(a.x - p.x, a.z - p.z) > edge) { far++; if (window.__iz.characters.isDrawn(a.id)) drawn++; }
+    return { near, far, drawn };
   });
-  assert.ok(vision.near < 20); assert.equal(vision.drawn, 0);
+  assert.ok(vision.near < 100, 'oyunda sis karakterin çevresine kapanır'); assert.ok(vision.far > 0); assert.equal(vision.drawn, 0);
   await page.screenshot({ path: 'artifacts/game.png' });
 
   await page.keyboard.press('Escape');
@@ -66,8 +67,11 @@ try {
   assert.equal(await game(() => window.__iz.world.player.marks), 2);
   await game(() => window.__iz.setRole('prosecutor')); await clickOn(30);
   assert.ok(await game(() => window.__iz.world.marks.get(30)?.cleared), 'savcı sol tıkla yakalar (yanlış kişi: aklanır)');
-  await game(() => window.__iz.setRole('criminal')); await clickOn(30);
-  assert.ok(await game(() => window.__iz.world.player.appearance === window.__iz.world.actors[30].appearance), 'suçlu sol tıkla kılığa girer');
+  // Suçlu: imleçteki kişinin kılığına Q ile girer.
+  await game(() => window.__iz.setRole('criminal'));
+  { const q = await game(() => { const a = window.__iz.world.actors[30]; return window.__iz.app.project(a.x, 1.1, a.z); }); await page.mouse.move(q.x, q.y); await page.waitForTimeout(150); }
+  await page.keyboard.press('KeyQ'); await page.waitForTimeout(150);
+  assert.ok(await game(() => window.__iz.world.player.appearance === window.__iz.world.actors[30].appearance), 'suçlu Q ile kılığa girer');
   await game(() => { const w = window.__iz.world; w.marks.set(0, { owner: 1, ox: 0, oz: 0, cleared: false, time: w.time }); });
   await page.waitForTimeout(250);
   assert.ok(await game(() => document.getElementById('alert').classList.contains('on')), 'işaretli suçlunun ekran kenarı kızarır');
@@ -96,11 +100,10 @@ try {
   assert.ok(fades.others <= 3, 'diğer nesneler katı kalır (' + fades.others + ')');
   await page.screenshot({ path: 'artifacts/seethrough.png' });
 
-  // Suçlu Q ile yanındaki kişiyi öldürür (ortak hak bir azalır).
-  await game(() => { window.__iz.setRole('criminal'); const w = window.__iz.world, p = w.player, n = w.actors[31]; n.x = p.x + 1.5; n.z = p.z; });
-  await page.keyboard.press('KeyQ'); await page.waitForTimeout(150);
-  assert.equal(await game(() => window.__iz.world.actors[31].alive), false, 'Q öldürür');
-  assert.equal(await game(() => window.__iz.world.killsLeft), 1);
+  // Suçlu imleçteki yakın kişiyi sol tıkla öldürür.
+  await game(() => { window.__iz.setRole('criminal'); const w = window.__iz.world, p = w.player, n = w.actors[31]; n.x = p.x + 1.5; n.z = p.z; n.think = 9999; n.path = []; });
+  await clickOn(31);
+  assert.equal(await game(() => window.__iz.world.actors[31].alive), false, 'suçlu sol tıkla öldürür');
   // M küçük haritayı büyütür, tekrar M küçültür.
   const mapWidth = async () => (await page.locator('#mapcard').boundingBox()).width;
   const small = await mapWidth();

@@ -6,6 +6,8 @@ import { followPath, routine } from './crowd.js';
 import { buildEnvironmentView } from './environment.js';
 import { createInput } from './input.js';
 import { createMinimap } from './minimap.js';
+import { createNetClient } from './net/client.js';
+import { onlineEnabled } from './platform.js';
 import { dist } from './physics.js';
 import { createScreens } from './screens.js';
 import { createUI } from './ui.js';
@@ -16,9 +18,12 @@ import { finish } from './score.js';
 import { createWorld, spectate, startRound, step } from './world.js';
 
 /**
- * İstemci uygulaması: sahne, kamera, arayüz, ekranlar ve oyun akışı. Simülasyon (world.js) bu tarayıcıda koşar.
- * Akış: menü (arka planda kendi kendine dolaşan bir kasaba) → her tur rol seçimi → tur girişi → oyun → tur sonu →
- * … beşinci turun sonunda maç sonu. Her karede: (adım) → görünüm eşitleme → arayüz → kamera → çizim.
+ * İstemci uygulaması: sahne, kamera, arayüz, ekranlar ve oyun akışı.
+ *  - **Tek başına**: simülasyon (world.js) bu tarayıcıda koşar. Menü (arka planda kendi kendine dolaşan bir kasaba) →
+ *    her tur rol seçimi → tur girişi → oyun → tur sonu → … beşinci turun sonunda maç sonu.
+ *  - **Çevrim içi**: oda kur / katıl → lobi (10 koltuk, taraf yok) → kuran başlatır. Simülasyon sunucuda koşar, istemci
+ *    (net/client.js) dünyanın kopyasını çizer. Rol seçimi yoktur, her tur rastgele; turlar sunucunun saatiyle akar.
+ *    Sunucuya bağlanılamadıkça oda düğmeleri "Yakında" yazar; tek başına oyun aynen oynanır. Her karede: (adım) → görünüm eşitleme → arayüz → kamera → çizim.
  * `?test` adresinde testler için window.__iz açılır; normal oyunda gizli durum pencereye çıkmaz.
  */
 export async function start(root) {
@@ -37,7 +42,7 @@ export async function start(root) {
   scene.add(sun);
 
   const demo = () => { const w = createWorld({ seed: Date.now() }); startRound(w); return w; };
-  const app = { world: demo(), match: null, level: 'normal', playing: false, paused: false, choosing: false, shownResult: false, spectator: 0, hover: null, zoom: 25, w: innerWidth, h: innerHeight };
+  const app = { world: demo(), match: null, level: 'normal', playing: false, paused: false, choosing: false, shownResult: false, online: false, inLobby: false, spectator: 0, hover: null, zoom: 25, w: innerWidth, h: innerHeight };
   app.project = (x, y, z) => {
     const p = new T.Vector3(x, y, z).project(camera);
     return { x: (p.x * 0.5 + 0.5) * app.w, y: (-0.5 * p.y + 0.5) * app.h, inside: Math.abs(p.x) < 0.94 && Math.abs(p.y) < 0.88 };
@@ -67,31 +72,110 @@ export async function start(root) {
       screens.roleChoice(1);
     },
     quit() {
+      if (app.online || app.inLobby) { net.leave(); app.online = false; app.inLobby = false; }
       app.playing = false; app.paused = false; app.choosing = false; app.match = null;
       $('#hud').hidden = true; document.body.classList.remove('playing');
       for (const id of ['#menu', '#scene-caption', '#menu-footer']) $(id).hidden = false;
       ui.clear(); app.world = demo(); characters.reset(app.world);
     },
+    // Çevrim içi lobi ve tur akışı (sunucuya gider).
+    seat: seat => net.seat(seat),
+    level: level => net.settings(level),
+    startRoom: () => net.start(),
+    leaveRoom() { net.leave(); app.inLobby = false; $('#overlay').hidden = true; showMenu(true); },
+    /** Maç sonu tablosundan lobiye: kopya dünya bırakılır, arkada yine menünün kasabası dolaşır. */
+    lobbyBack() { leaveOnlineGame(); if (net.lobby) openLobby(net.lobby); else hooks.quit(); },
   };
   const screens = createScreens(root, app, hooks);
   const ui = createUI(root, app, hooks), minimap = createMinimap($('#minimap'), $('#mapcard'), app, $('#regionName'));
   const input = createInput(canvas, app, {
     busy: () => !app.playing || app.paused || !$('#scores').hidden,
     escape() {
-      // Rol seçilmeden tur başlamaz: seçim ekranı (ilk turda maç henüz başlamamışken de) Esc ile kapanmaz.
-      if (app.choosing) return;
+      // Rol seçilmeden tur başlamaz: seçim ekranı (ilk turda maç henüz başlamamışken de) Esc ile kapanmaz. Lobi de kapanmaz.
+      if (app.choosing || app.inLobby) return;
       if (!app.playing) { $('#overlay').hidden = true; return; }
       if (app.world.result) return;
       if (app.paused) screens.close(); else screens.pauseMenu();
     },
     tab: down => (down ? screens.scoreToggle(true) : ($('#scores').hidden = true)),
-    blur() { if (app.playing && !app.paused && !app.world.result) screens.pauseMenu(); },
+    blur() { if (app.playing && !app.online && !app.paused && !app.world.result) screens.pauseMenu(); },
     use() { if (app.playing && !app.paused) ui.toast('İmlecin altında kimse yok.'); },
     map() { if (app.playing) minimap.toggle(); },
     sound: type => ui.tone(type === 'use' ? 520 : 330, 0.08),
   });
 
   $('#start').onclick = () => hooks.newMatch();
+
+  // ---------- Çevrim içi ----------
+  const networked = onlineEnabled();
+  let pendingRoom = null;
+  const nick = () => { const v = $('#nick').value.trim().slice(0, 16); try { localStorage.setItem('iz.nick', v); } catch { /* yok */ } return v; };
+  try { $('#nick').value = localStorage.getItem('iz.nick') || ''; } catch { /* yok */ }
+  function showMenu(on) {
+    for (const id of ['#menu', '#scene-caption', '#menu-footer']) $(id).hidden = !on;
+    document.body.classList.toggle('playing', !on && app.playing);
+  }
+  function openLobby(l, error = '') { app.inLobby = true; showMenu(false); screens.lobby(l, net.id, error); }
+  function setServer(on) {
+    for (const id of ['#create', '#join']) { const b = $(id); b.disabled = !on; b.textContent = on ? b.dataset.label : 'YAKINDA'; }
+    if (!on) $('#join-row').hidden = true;
+  }
+  const net = createNetClient({
+    onWelcome() {
+      const r = pendingRoom; pendingRoom = null;
+      if (r?.create) net.create(app.level);
+      else if (r?.code) net.join(r.code);
+      // Sayfa yenilendi: sunucu oyundaki koltuğu token'la kendisi geri verir; lobideyse koda yeniden katılınır.
+      else if (net.rememberedRoom()) { const code = net.rememberedRoom(); setTimeout(() => { if (!net.lobby && !net.world) net.join(code); }, 400); }
+    },
+    onLobby(l) {
+      if (app.online && app.world.remote && !(app.world.result && app.world.final)) return; // oyun sürerken lobi görünmez
+      if (app.online) return; // maç sonu tablosu açık: "Lobiye dön" ile açılır
+      if (l.state === 'lobby') openLobby(l);
+    },
+    onRound(world) { enterOnline(world); },
+    onError(msg) {
+      if (app.inLobby && net.lobby) openLobby(net.lobby, msg);
+      else { ui.toast(msg); net.forgetRoom(); }
+    },
+    onOnline(n) { $('#online').textContent = n > 0 ? `● ${n} çevrim içi` : ''; },
+    onConnect() { setServer(true); },
+    onDisconnect() { setServer(false); $('#online').textContent = ''; },
+  });
+  /** Çevrim içi tur başladı (ya da geri bağlanınca sürüyor): kopya dünya çizilir, rol girişi açılır. */
+  function enterOnline(world) {
+    app.world = world; app.online = true; app.inLobby = false; app.playing = true; app.paused = false; app.shownResult = false; app.spectator = 0;
+    characters.reset(world); ui.clear();
+    focus.set(world.player.x, 0, world.player.z);
+    showMenu(false); document.body.classList.add('playing');
+    $('#hud').hidden = false; $('#scores').hidden = true;
+    ui.update();
+    screens.roundIntro();
+  }
+  function leaveOnlineGame() {
+    net.dropWorld(); app.online = false; app.playing = false; app.paused = false;
+    $('#hud').hidden = true; document.body.classList.remove('playing'); ui.clear();
+    app.world = demo(); characters.reset(app.world);
+  }
+  const goOnline = room => {
+    const name = nick();
+    if (!name) { ui.toast('Önce adını yaz.'); $('#nick').focus(); return; }
+    pendingRoom = room;
+    if (net.connected) net.hello(name); else net.connect(name);
+  };
+  for (const id of ['#create', '#join']) $(id).dataset.label = $(id).textContent;
+  $('#create').onclick = () => goOnline({ create: true });
+  $('#join').onclick = () => { $('#join-row').hidden = false; $('#code').focus(); };
+  const joinCode = () => { const code = $('#code').value.trim().toUpperCase(); if (code) goOnline({ code }); };
+  $('#joinGo').onclick = joinCode;
+  $('#code').onkeydown = e => { if (e.key === 'Enter') joinCode(); e.stopPropagation(); };
+  $('#nick').onkeydown = e => e.stopPropagation();
+  setServer(false);
+  if (networked) {
+    const linked = new URLSearchParams(location.search).get('oda');
+    if (linked) { $('#join-row').hidden = false; $('#code').value = linked.toUpperCase(); }
+    net.connect(nick() || 'İzci');
+  } else for (const id of ['#create', '#join']) $(id).hidden = true;
   $('#helpBtn').onclick = () => screens.help();
   $('#pauseBtn').onclick = () => screens.pauseMenu();
   $('#sound').onclick = () => { app.soundOn = !app.soundOn; $('#sound').textContent = 'Ses: ' + (app.soundOn ? 'açık' : 'kapalı'); ui.tone(330, 0.3); };
@@ -120,7 +204,12 @@ export async function start(root) {
     last = now;
     try {
       const world = app.world;
-      if (app.playing && !app.paused) { step(world, dt, input.take()); if (world.result) screens.showResult(); }
+      if (app.online) {
+        // Çevrim içi: simülasyon sunucuda; burada yalnızca ara değer, kendi karakterinin ileri kayması ve girdi gönderimi.
+        net.update(dt, input.take(), app.paused || !$('#scores').hidden);
+        if (world.result) screens.showResult();
+        screens.tickOnline();
+      } else if (app.playing && !app.paused) { step(world, dt, input.take()); if (world.result) screens.showResult(); }
       else if (!app.playing) menuStep(world, dt);
       input.pickHover();
       const eyes = app.playing ? spectate(world, app.spectator) : null;
@@ -164,10 +253,10 @@ export async function start(root) {
       get world() { return app.world; }, get app() { return { ...app, fogNear: () => scene.fog.near }; }, renderer, characters, town,
       finish: (kind = 'timeout') => finish(app.world, kind),
       traceArrows: () => effects.arrowsShown(),
-      newMatch: hooks.newMatch, pick: hooks.pick, close: screens.close, minimap,
+      newMatch: hooks.newMatch, pick: hooks.pick, close: screens.close, minimap, net,
       step(seconds) { for (let t = 0; t < seconds; t += 0.05) step(app.world, 0.05); ui.update(); },
       /** Testte oyuncunun rolünü tur içinde değiştirir (hakları da o role göre). */
-      setRole(role) { const p = app.world.player; p.role = role; p.marks = role === 'detective' ? CFG.marks : 0; p.catches = role === 'prosecutor' ? CFG.catches : 0; ui.clear(); ui.update(); },
+      setRole(role) { const p = app.world.player; p.role = role; p.marks = role === 'detective' ? CFG.marks : 0; ui.clear(); ui.update(); },
     };
   }
 }

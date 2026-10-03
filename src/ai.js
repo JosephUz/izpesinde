@@ -2,13 +2,13 @@ import { CFG, LEVELS } from './config.js';
 import { disguise, murder } from './criminal.js';
 import { routine, setGoal } from './crowd.js';
 import { REGIONS } from './environment.js';
-import { arrest, circleOf, mark, marksFor } from './marks.js';
+import { arrest, circleOf, mark, marksFor, revealedProsecutors } from './marks.js';
 import { dist, safe } from './physics.js';
 import { active, canAct, sees } from './roster.js';
 
 /**
  * Bot kararları. Botlar yalnızca kendi görüş alanını, aldıkları bildirimleri ve kendi rollerinin arayüzde gösterdiği
- * bilgiyi kullanır (savcı işaret dairelerini görür, dedektif kendi işaretini); gerçek rolleri asla okumazlar.
+ * bilgiyi kullanır (herkes işaretleri görür, suçlular ele verilen savcıyı görür); gerçek rolleri asla okumazlar.
  * Algı (iz görme) traces.js'te her karede, karar burada her botun tepki süresinde.
  */
 export function think(world, a) {
@@ -28,15 +28,16 @@ function patrol(world, a, spread) {
 
 /**
  * Dedektif: şüphe puanları izlerden birikir (traces.js) ve görülen kılık değişiminde kesinleşir. Başka bir dedektifin
- * suçluya koyduğu işaret herkese göründüğü için o kişi en şüpheli olur (görünüyorsa konumu, değilse haritadaki
- * daire). En şüpheliyi birkaç adım geriden izler; puan eşiği aşınca işaretler, ama zaten işaretli birine hak harcamaz.
+ * işareti herkese açık ama yanlış olabilir: ilk görüşte o kişiye biraz şüphe eklenir, takip yine izlerle sürer.
+ * En şüpheliyi birkaç adım geriden izler; puan eşiği aşınca işaretler, ama zaten işaretli birine hak harcamaz.
  * Son hakkı için daha emin olmak ister.
  */
 function thinkDetective(world, a) {
   for (const m of marksFor(world, a)) {
-    if (m.owner === a.id || !active(m.target)) continue;
+    if (m.owner === a.id || !active(m.target) || a.seenMarks.has(m.target.id + ':' + m.time)) continue;
+    a.seenMarks.add(m.target.id + ':' + m.time);
     const b = m.target, s = a.suspects.get(b.id), at = sees(world, a, b) ? b : circleOf(m, b);
-    a.suspects.set(b.id, { score: Math.max(s?.score || 0, world.level.markAt + 1), time: world.time, x: at.x, z: at.z });
+    a.suspects.set(b.id, { score: (s?.score || 0) + 0.6, time: world.time, x: at.x, z: at.z });
   }
   for (const [id, s] of a.suspects) {
     const b = world.actors[id];
@@ -53,8 +54,8 @@ function thinkDetective(world, a) {
 
 /**
  * Savcı: görünen işaretli kişiye gidip yakalar; yoksa en yakın işaret dairesine (uzaksa koşarak). İşaret yokken kendi
- * izlerinden biriken şüpheyle en şüpheliye yaklaşır; yakalama hakkı değerli olduğu için ancak çok emin olunca (iki
- * ayrı izde aynı kişi) işaretsiz birini yakalar. Hiçbiri yoksa devriye.
+ * izlerinden biriken şüpheyle en şüpheliye yaklaşır. Yakalama sınırsızdır ama her deneme kimliğini suçlulara açar ve
+ * yanlışı −1'dir: işaretsiz birini ancak çok emin olunca yakalar. Hiçbiri yoksa devriye.
  */
 function thinkProsecutor(world, a) {
   const marks = marksFor(world, a).filter(m => !m.cleared && active(m.target));
@@ -71,7 +72,7 @@ function thinkProsecutor(world, a) {
   const top = [...a.suspects].sort((p, q) => q[1].score - p[1].score)[0];
   if (top) {
     const b = world.actors[top[0]];
-    if (top[1].score >= world.level.markAt + 0.8 && a.catches > 1 && sees(world, a, b) && dist(a, b) <= CFG.catchRange - 0.4 && arrest(world, a, b)) { a.suspects.delete(b.id); return; }
+    if (top[1].score >= world.level.markAt + 0.8 && sees(world, a, b) && dist(a, b) <= CFG.catchRange - 0.4 && arrest(world, a, b)) { a.suspects.delete(b.id); return; }
     setGoal(world, a, sees(world, a, b) ? b : top[1]);
     return;
   }
@@ -79,16 +80,24 @@ function thinkProsecutor(world, a) {
 }
 
 /**
- * Suçlu: kalabalık iş noktalarını seçer. İşaretlendiğini bilir; zorluğun tereddüt süresi geçince az kişinin gördüğü
- * bir anda yakındaki birinin kılığına girer. Uzun süre peşine düşeni (savcı ya da dedektif olabilir; ikisi de
- * kazandırır) tenhada öldürmeyi deneyebilir.
+ * Suçlu: kalabalık iş noktalarını seçer. Ele verilen bir savcı yakındaysa (zorluğa göre) onu avlar: savcı öldürmek
+ * kazandırır, iki savcı ölürse tur kazanılır. İşaretlendiğini bilir; zorluğun tereddüt süresi geçince az kişinin
+ * gördüğü bir anda yakındaki birinin kılığına girer. Uzun süre peşine düşeni tenhada öldürmeyi deneyebilir.
  */
 function thinkCriminal(world, a) {
+  const hunted = world.level.killChance > 0 && revealedProsecutors(world).filter(p => dist(a, p) < 35).sort((p, q) => dist(a, p) - dist(a, q))[0];
+  if (hunted) {
+    a.hurry = dist(a, hunted) > 6;
+    if (dist(a, hunted) <= CFG.reach && murder(world, a, hunted)) return;
+    setGoal(world, a, hunted);
+    return;
+  }
+  a.hurry = false;
   const near = world.actors.filter(b => b !== a && active(b) && !a.known.has(b.id) && dist(a, b) < 7 && sees(world, a, b, 7));
   for (const b of near) if (!a.followers.has(b.id)) a.followers.set(b.id, world.time);
   for (const id of a.followers.keys()) if (!near.some(b => b.id === id)) a.followers.delete(id);
   const shadow = [...a.followers].find(([, since]) => world.time - since > 12);
-  if (shadow && world.killsLeft > 0 && near.length <= 2 && world.random() < world.level.killChance * 0.2) {
+  if (shadow && near.length <= 2 && world.random() < world.level.killChance * 0.2) {
     const b = world.actors[shadow[0]];
     if (dist(a, b) <= CFG.reach) { murder(world, a, b); return; }
     setGoal(world, a, b);

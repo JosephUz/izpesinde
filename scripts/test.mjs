@@ -14,7 +14,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TESTLER = ['tests/rules-smoke.mjs', 'tests/browser-smoke.mjs'];
+const TESTLER = ['tests/rules-smoke.mjs', 'tests/online-smoke.mjs', 'tests/browser-smoke.mjs', 'tests/online-browser.mjs'];
 
 /** İşletim sisteminin verdiği boş bir port: sabit 5197 başka bir sunucuda (ör. Docker) açık olabilir. */
 const bosPort = () => new Promise((çöz, hata) => {
@@ -103,7 +103,7 @@ if (!playwright) {
 
 const port = await bosPort();
 const adres = `http://127.0.0.1:${port}`;
-const sunucu = spawn(process.execPath, ['server.mjs'], { cwd: root, env: { ...process.env, PORT: String(port) }, stdio: 'ignore' });
+const sunucu = spawn(process.execPath, ['server.mjs'], { cwd: root, env: { ...process.env, PORT: String(port), IZ_TUR_SN: '25' }, stdio: 'ignore' });
 let kod = 0;
 try {
   // Burada `process.exit` **kullanılmaz**: `finally` çalışmadan çıkılırsa açılan sunucu süreci arkada kalır.

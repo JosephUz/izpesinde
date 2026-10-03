@@ -1,6 +1,6 @@
 import * as T from 'three';
 import { CFG, PALETTE } from './config.js';
-import { marksFor } from './marks.js';
+import { marksFor, revealedProsecutors } from './marks.js';
 import { dist } from './physics.js';
 import { active } from './roster.js';
 
@@ -9,8 +9,8 @@ import { active } from './roster.js';
  * ayak halkası) ama doğrudan çizilmez: her karede görünür parçalar (geometri + renk) başına bir InstancedMesh'e
  * toplanır, 180 karakter birkaç düzine çizim çağrısıdır. Görüş alanı dışındakiler hiç toplanmaz.
  *
- * Ayak halkaları: tanıdığın kişiler yeşil, gördüğün işaretler altın (aklanmış işaret gri). Ayrıca kendi halkan ve
- * imlecin altındaki hedefin halkası (rol rengiyle).
+ * Ayak halkaları: tanıdığın kişiler yeşil, işaretliler altın (aklanmış işaret gri), suçlunun gözünde ele verilmiş
+ * savcılar kırmızı. Ayrıca kendi halkan ve imlecin altındaki hedefin halkası (rol rengiyle).
  */
 const LIMIT = 400;
 
@@ -83,6 +83,7 @@ export function createCharacterView(scene, kit) {
     /** eyes: kimin gözünden bakılıyor (oyuncu ya da izlenen takım arkadaşı); menüde null. */
     sync(world, eyes, playing, time, hoverId, focus) {
       const marks = new Map(playing && eyes ? marksFor(world, eyes).map(m => [m.target.id, m]) : []);
+      const exposed = new Set(playing && eyes?.role === 'criminal' ? revealedProsecutors(world).map(a => a.id) : []);
       for (const a of world.actors) {
         const v = views.get(a.id);
         if (!v) continue;
@@ -99,8 +100,9 @@ export function createCharacterView(scene, kit) {
           l.rotation.x = a.carry && i % 2 ? -1.1 : a.action || a.wait > 0 ? (i % 2 ? Math.sin(time * 5) * 0.65 - 0.7 : 0) : walk * (i < 2 ? 1 : -1);
         });
         const mark = marks.get(a.id), known = eyes && eyes.known.has(a.id);
-        v.marker.visible = playing && active(a) && Boolean(known || mark);
-        v.marker.material.color.set(mark ? (mark.cleared ? '#9aa39a' : '#efc67d') : '#b4d5a1');
+        const target = exposed.has(a.id);
+        v.marker.visible = playing && active(a) && Boolean(known || mark || target);
+        v.marker.material.color.set(target ? '#e2483a' : mark ? (mark.cleared ? '#9aa39a' : '#efc67d') : '#b4d5a1');
         v.marker.rotation.z = time * 0.6;
       }
       const p = world.player;
@@ -110,7 +112,7 @@ export function createCharacterView(scene, kit) {
       hoverRing.visible = Boolean(hover);
       if (hover) {
         hoverRing.position.set(hover.x, 0.09, hover.z);
-        hoverRing.material.color.set(p.role === 'prosecutor' ? '#ff9d7a' : p.role === 'criminal' ? '#b9e1de' : '#ffe7a8');
+        hoverRing.material.color.set(p.role === 'prosecutor' ? '#ff9d7a' : p.role === 'criminal' ? '#e2483a' : '#ffe7a8');
         hoverRing.scale.setScalar(1 + Math.sin(time * 6) * 0.06);
       }
       batch();

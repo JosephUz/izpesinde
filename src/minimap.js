@@ -1,6 +1,6 @@
 import { CFG } from './config.js';
 import { REGIONS } from './environment.js';
-import { circleOf, marksFor } from './marks.js';
+import { circleOf, marksFor, revealedProsecutors } from './marks.js';
 import { dist } from './physics.js';
 import { active } from './roster.js';
 import { spectate } from './world.js';
@@ -11,6 +11,7 @@ import { spectate } from './world.js';
  *    bilgisi; tenhaya sapan biri herkesin haritasında görünür (yakalanan ve ölenler çizilmez),
  *  - oyuncunun görebildiği işaret daireleri (yaklaşık bölge, kesin konum değil; aklanmışsa gri) ve kılık değişiminden
  *    sonra sönen daireler,
+ *  - suçluysan ele verilmiş savcılar (kırmızı, haritanın her yerinde: hedef olsunlar),
  *  - kendi konumu ve görüş çemberi.
  * M tuşu haritayı büyütüp küçültür (toggle): büyükken kart iki kat boyda, tuval de iki kat çözünürlükte çizilir.
  */
@@ -56,8 +57,11 @@ export function createMinimap(canvas, card, app, regionLabel) {
         ctx.strokeStyle = m.cleared ? '#9aa39a90' : '#e5bd70'; ctx.fillStyle = m.cleared ? '#9aa39a18' : '#e5bd7026';
         circle(q.x, q.z, CFG.mapCircle * s); ctx.fill(); ctx.stroke();
       }
+      if (viewer.role === 'criminal') {
+        ctx.fillStyle = '#e2483a';
+        for (const t of revealedProsecutors(world)) { circle(t.x, t.z, 3.5 * k); ctx.fill(); }
+      }
       for (const g of world.ghosts) {
-        if (viewer.role !== 'prosecutor' && g.owner !== viewer.id) continue;
         ctx.strokeStyle = `rgba(229,189,112,${(((g.until - world.time) / CFG.mapFade) * 0.6).toFixed(2)})`;
         ctx.setLineDash([3 * k, 3 * k]); circle(g.x, g.z, CFG.mapCircle * s); ctx.stroke(); ctx.setLineDash([]);
       }

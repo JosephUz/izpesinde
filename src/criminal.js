@@ -5,13 +5,13 @@ import { dist } from './physics.js';
 import { active, canAct, contestants, emit, nearest, sees } from './roster.js';
 
 /**
- * Yalnızca suçluların eylemleri: kılık değiştirme (sol tık) ve ortak cinayet hakkı (Q).
+ * Yalnızca suçluların eylemleri: kılık değiştirme (imleçteki kişi + Q) ve öldürme (imleçteki kişi + sol tık).
  *
- * Kılık: tıklanan yakın karakterin kıyafetini ve şapkasını kopyalar; sınırsızdır ama her değişim −1. İşaret kalkar.
+ * Kılık: imleçteki yakın karakterin kıyafetini ve şapkasını kopyalar; sınırsızdır ama her değişim −1. İşaret kalkar.
  * Değişimi gören dedektif takibi sürdürür (ve yalnızca suçlular kılık değiştirdiği için kesinleşir); görmeyenler kaybeder.
  *
- * Cinayet: iki suçlunun turda ortak CFG.kills hakkı. NPC −1, dedektif +1, savcı +2. Ölen dedektifin işaret, ölen
- * savcının yakalama hakları yanar; iki savcı da ölürse suçlular kazanır. Cinayet suçluları açığa çıkarmaz.
+ * Öldürme: sınırsız (yanlışlıkla çift tıklamaya karşı CFG.killCooldown beklemeli). Kasabalı −1, dedektif +1, savcı
+ * +2. Ölen dedektifin işaret hakları yanar; iki savcı da ölürse suçlular kazanır. Cinayet suçluları açığa çıkarmaz.
  */
 export function disguise(world, a, b) {
   if (!canAct(world, a) || a.role !== 'criminal' || a.disguiseCd > 0 || !active(b) || b === a) return false;
@@ -27,22 +27,20 @@ export function disguise(world, a, b) {
     if (sees(world, obs, a)) obs.suspects.set(a.id, { score: (s?.score || 0) + 2, time: world.time, x: a.x, z: a.z });
     else if (s) obs.suspects.delete(a.id);
   }
-  if (a.id === 0) emit(world, 'Kılık değişti (−1). Seni görenler takibi sürdürebilir.');
+  emit(world, 'Kılık değişti (−1). Seni görenler takibi sürdürebilir.', 'info', a.id);
   checkRights(world);
   return true;
 }
 
 export function murder(world, a, b = nearest(world, a, b => b.role !== 'criminal')) {
-  if (!canAct(world, a) || a.role !== 'criminal' || world.killsLeft <= 0 || !active(b) || b.role === 'criminal') return false;
+  if (!canAct(world, a) || a.role !== 'criminal' || a.killCd > 0 || !active(b) || b === a || b.role === 'criminal') return false;
   if (dist(a, b) > CFG.reach || !sees(world, a, b, CFG.reach)) return false;
-  // Ortak hak tek yetkili adımda, herhangi bir animasyondan önce tüketilir: eşzamanlı denemeler haktan fazla ölüm üretmez.
-  world.killsLeft--;
+  a.killCd = CFG.killCooldown;
   b.alive = false; b.action = null; b.path = [];
   dropCrate(world, b);
   const S = CFG.scores;
   world.tally[a.id] += b.role === 'detective' ? S.killDetective : b.role === 'prosecutor' ? S.killProsecutor : S.killCivilian;
   if (b.role === 'detective') b.marks = 0;
-  if (b.role === 'prosecutor') b.catches = 0;
   emit(world, 'Kasabada biri öldürüldü.', 'danger');
   world.effects.push({ type: 'murder', x: b.x, z: b.z, t: 1 });
   checkRights(world);

@@ -5,13 +5,13 @@ import { active } from './roster.js';
 /**
  * Klavye ve fare. Basılı tuşlar (keys) hareket için her karede okunur; tek seferlik eylemler (zıpla, atıl, kutu,
  * çalış, öldür, sol tık hedefi) `pending` içinde biriktirilip bir sonraki simülasyon adımına verilir.
- * Sol tık imlecin altındaki karakteri hedefler (pickHover: oyuncunun görüş alanındaki, imlece en yakın karakter; bina
+ * Sol tık ve Q (suçlunun kılığı) imlecin altındaki karakteri hedefler (pickHover: oyuncunun görüş alanındaki, imlece en yakın karakter; bina
  * arkasında kalsa bile seçilebilir, çünkü ekran konumuna bakılır).
  *
  * hooks: escape(), tab(down), blur(), map() (M: küçük haritayı büyüt / küçült), use() (imleçte hedef yokken uyarı),
  * sound(type), busy() (diyalog açık mı).
  */
-const BINDS = { KeyE: 'carry', KeyF: 'blend', KeyQ: 'kill', Space: 'jump' };
+const BINDS = { KeyE: 'carry', KeyF: 'blend', Space: 'jump' };
 
 export function createInput(canvas, app, hooks) {
   const keys = new Set(), mouse = { x: -1, y: -1 };
@@ -43,6 +43,7 @@ export function createInput(canvas, app, hooks) {
     if (e.code === 'Tab') { hooks.tab(true); return; }
     if (e.code === 'KeyM') { hooks.map(); return; }
     keys.add(e.code);
+    if (e.code === 'KeyQ') { pickHover(); if (app.hover && app.world.player.role === 'criminal') command('swap', app.hover.id); return; }
     if (BINDS[e.code]) command(BINDS[e.code]);
   });
   window.addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'Tab') hooks.tab(false); });

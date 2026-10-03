@@ -3,11 +3,16 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { WebSocketServer } from 'ws';
+import { createRooms } from './server/rooms.mjs';
 
 /**
- * Yerel sunucu: yalnızca statik dosyalar (oyun tek oyunculudur, ağ odası yoktur). Proje klasörü ve three.js paketi
- * dışında hiçbir dosyaya erişim yok; three /vendor/ altından node_modules'tan verilir. HOST yalnızca Docker'da 0.0.0.0'dır,
- * yerelde oyun bu bilgisayarda kalır. Port doluysa ve orada zaten İz Peşinde çalışıyorsa yalnızca tarayıcı açılır.
+ * Tek süreç, tek port: statik dosyalar (oyun) + WebSocket (çevrim içi odalar, otoriter simülasyon; server/rooms.mjs).
+ * Cloudflare Tunnel bu portu izpesinde-sunucu.josephuz.com'a bağlar; oyun dosyaları Cloudflare'deki statik siteden
+ * (izpesinde.josephuz.com, wrangler.jsonc) gelir ve tarayıcı bu adrese bağlanır. Yerelde sayfa da buradan açılır
+ * (ws://aynı-adres). Proje klasörü ve three.js paketi dışında hiçbir dosyaya erişim yok; three /vendor/ altından
+ * node_modules'tan verilir. HOST yalnızca Docker'da 0.0.0.0'dır. Port doluysa ve orada zaten İz Peşinde çalışıyorsa
+ * yalnızca tarayıcı açılır.
  */
 const root = path.dirname(fileURLToPath(import.meta.url));
 const vendorDir = path.join(root, 'node_modules', 'three', 'build');
@@ -35,6 +40,7 @@ async function buildStamp() {
   };
   for (const f of rootFiles) { try { newest = Math.max(newest, (await stat(path.join(root, f))).mtimeMs); } catch { /* yok */ } }
   await walk(path.join(root, 'src'));
+  await walk(path.join(root, 'server'));
   return new Date(newest).toISOString();
 }
 let stamp = 'bilinmiyor';
@@ -56,7 +62,7 @@ function resolveFile(pathname) {
 
 const server = http.createServer(async (req, res) => {
   const { pathname } = new URL(req.url, 'http://localhost');
-  if (pathname === '/health') { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': noStore }); res.end('iz-pesinde ' + stamp); return; }
+  if (pathname === '/health') { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': noStore }); res.end(JSON.stringify({ oyun: 'iz-pesinde', ...rooms.stats(), surum: stamp })); return; }
   const file = resolveFile(pathname), type = file && types[path.extname(file)];
   if (!type) { res.writeHead(404); res.end('Bulunamadı'); return; }
   try {
@@ -65,6 +71,21 @@ const server = http.createServer(async (req, res) => {
     res.end(body);
   } catch { res.writeHead(404); res.end('Bulunamadı'); }
 });
+
+const rooms = createRooms({ log: (...a) => console.log(new Date().toLocaleTimeString('tr-TR'), ...a) });
+/**
+ * WebSocket yalnız bilinen sayfalardan: aynı adres (yerelde), *.josephuz.com (Cloudflare'deki statik site) ve localhost.
+ * Origin'siz istemciler (testler, araçlar) kabul edilir.
+ */
+function allowedOrigin(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  try { const u = new URL(origin); return u.host === req.headers.host || u.hostname === 'josephuz.com' || u.hostname.endsWith('.josephuz.com') || u.hostname === 'localhost' || u.hostname === '127.0.0.1'; } catch { return false; }
+}
+const wss = new WebSocketServer({ server, maxPayload: 16 * 1024, verifyClient: ({ req }) => allowedOrigin(req) });
+wss.on('connection', ws => rooms.attach(ws));
+wss.on('error', () => {}); // port doluyken sunucunun hatası buraya da yansır; asıl işleyici server.on('error')
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { console.log(sig + ': kapanıyor.'); wss.close(); server.close(); process.exit(0); });
 
 const host = process.env.HOST || '127.0.0.1', port = Number(process.env.PORT || 5197), shouldOpen = process.argv.includes('--open');
 function ready(actual) {
@@ -80,7 +101,7 @@ server.on('error', async error => {
   if (error.code !== 'EADDRINUSE') { console.error(error.message); process.exitCode = 1; return; }
   try {
     const r = await fetch('http://127.0.0.1:' + port + '/health', { signal: AbortSignal.timeout(1500) });
-    if ((await r.text()).startsWith('iz-pesinde')) { ready(port); return; }
+    if ((await r.json()).oyun === 'iz-pesinde') { ready(port); return; }
   } catch { /* başka bir sunucu */ }
   server.listen(0, host);
 });

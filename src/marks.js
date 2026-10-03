@@ -8,14 +8,14 @@ import { finish } from './score.js';
  * Dedektifin işareti ve savcının yakalaması (ikisi de sol tık).
  *
  * İşaret: dedektif başına tur başına CFG.marks hak, aynı anda tek aktif işaret; bir kişide tek işaret. Başka bir
- * dedektif aynı kişiyi işaretlerse eski sahibine uyarı gider. Suçlunun üstündeki işaret herkese görünür (diğer
- * dedektifler de o suçluya odaklanabilsin); başka birinin üstündeki işareti yalnızca sahibi ve savcılar görür. Haritaya
- * kişinin kendisi değil, ondan sabit rastgele uzaklıkta merkezli bir daire düşer. Suçlu olmayanı işaretlemek
- * −1'dir (tur sonunda yazılır) ve işaret kalkmaz. İşaretli suçlu kılık değiştirince işaret kalkar.
+ * dedektif aynı kişiyi işaretlerse eski sahibine uyarı gider. İşaretleri herkes görür; haritaya kişinin kendisi değil,
+ * ondan sabit rastgele uzaklıkta merkezli bir daire düşer. Suçlu olmayanı işaretlemek −1'dir (tur sonunda yazılır) ve
+ * işaret kalkmaz. İşaretli suçlu kılık değiştirince işaret kalkar; işaretli suçlunun ekran kenarı kızarır.
  *
- * Yakalama: savcı başına CFG.catches hak; her deneme bir hak. Yanlış kişi −1 ve işareti savcılara "aklandı" görünür.
+ * Yakalama: sınırsızdır ama yanlış kişi −1 ve işareti "aklandı" görünür. Her yakalama denemesi (doğru ya da yanlış)
+ * savcıyı ele verir: kimliği CFG.reveal saniye suçlulara görünür ve hedef olur (world.revealed).
  *
- * world.marks: hedef id -> { owner, ox, oz, cleared, time }.
+ * world.marks: hedef id -> { owner, ox, oz, cleared, time }. world.revealed: savcı id -> görünür kalacağı tur saati.
  */
 
 export function markBy(world, owner) {
@@ -23,15 +23,18 @@ export function markBy(world, owner) {
   return null;
 }
 
-/** viewer'ın görebildiği işaretler: savcı hepsini, herkes suçluların üstündekileri, dedektif ayrıca kendisininkini. */
-export function marksFor(world, viewer) {
-  return [...world.marks]
-    .filter(([id, m]) => viewer.role === 'prosecutor' || m.owner === viewer.id || world.actors[id].role === 'criminal')
-    .map(([id, m]) => ({ target: world.actors[id], ...m }));
+/** Görünen işaretler: herkes bütün işaretleri görür (parametre, görünürlük kuralı değişirse diye durur). */
+export function marksFor(world) {
+  return [...world.marks].map(([id, m]) => ({ target: world.actors[id], ...m }));
 }
 
 /** Haritadaki dairenin merkezi: kesin konum değil, kişiden sabit bir kayma. */
 export const circleOf = (m, target) => ({ x: target.x + m.ox, z: target.z + m.oz });
+
+/** Kimliği şu an suçlulara açık olan savcılar. */
+export function revealedProsecutors(world) {
+  return [...world.revealed].filter(([id, until]) => until > world.time && active(world.actors[id])).map(([id]) => world.actors[id]);
+}
 
 /** İşareti kaldır. Kılık değişiminde haritada son bilinen yerde sönen bir daire kalır. */
 export function dropMark(world, id, reason) {
@@ -62,27 +65,31 @@ export function mark(world, a, b) {
   world.marks.set(b.id, { owner: a.id, ox: Math.cos(angle) * r, oz: Math.sin(angle) * r, cleared: false, time: world.time });
   // Yanlış işaretin bedeli tur sonunda yazılır: anında düşseydi işaretin doğru olup olmadığı tur içinde sızardı.
   if (b.role !== 'criminal') world.hidden[a.id] += CFG.scores.wrongMark;
-  emit(world, 'İşaret bırakıldı. Savcılar bölgeyi görüyor.', 'clue', a.id);
+  emit(world, 'İşaret bırakıldı. Herkes bölgeyi görüyor.', 'clue', a.id);
   if (b.role === 'criminal') emit(world, 'Biri seni işaretledi! Gözden kaybolup kılık değiştir.', 'danger', b.id);
   checkRights(world);
   return true;
 }
 
 export function arrest(world, a, b) {
-  if (!canAct(world, a) || a.role !== 'prosecutor' || a.catches <= 0 || !active(b) || b === a || a.known.has(b.id)) return false;
+  if (!canAct(world, a) || a.role !== 'prosecutor' || !active(b) || b === a || a.known.has(b.id)) return false;
   if (dist(a, b) > CFG.catchRange || !sees(world, a, b, CFG.catchRange)) return false;
-  a.catches--;
   world.effects.push({ type: 'arrest', x: b.x, z: b.z, t: 0.6 });
+  // Her deneme savcıyı ele verir: suçlular onu bir süre görür.
+  world.revealed.set(a.id, world.time + CFG.reveal);
+  emit(world, `Yakalama yaptın: ${CFG.reveal} sn boyunca suçlular seni görüyor.`, 'danger', a.id);
+  for (const c of criminals(world)) if (active(c)) emit(world, `Bir savcı kendini ele verdi! ${CFG.reveal} sn boyunca görünüyor.`, 'danger', c.id);
   const m = world.marks.get(b.id);
   if (b.role === 'criminal') {
     world.tally[a.id] += CFG.scores.catchBonus;
     if (m) world.tally[m.owner] += CFG.scores.markBonus;
-    emit(world, a.id === 0 ? 'Doğru kişi! Bir suçlu yakalandı.' : 'Bir suçlu yakalandı.', 'good');
+    emit(world, 'Doğru kişi! Bir suçlu yakalandı.', 'good', a.id);
+    for (const id of world.humans) if (id !== a.id) emit(world, 'Bir suçlu yakalandı.', 'good', id);
     caughtNow(world, b);
   } else {
     world.tally[a.id] += CFG.scores.wrongCatch;
     if (m) m.cleared = true;
-    emit(world, 'Yanlış kişi. Bu yakalama boşa gitti.', 'danger', a.id);
+    emit(world, 'Yanlış kişi (−1).', 'danger', a.id);
   }
   checkRights(world);
   return true;
@@ -97,16 +104,14 @@ export function caughtNow(world, b) {
 }
 
 /**
- * Kanunun gücü tükenirse serbest suçlular kazanır: iki savcı da öldüyse, hayattaki savcıların yakalama hakları
- * bittiyse ya da hayattaki dedektiflerin işaret hakları bitip hiçbir aktif işaret serbest bir suçluyu göstermiyorsa. (Son hak doğru kişiye kullanıldıysa savcılara o
- * işareti değerlendirme şansı kalır.)
+ * Kanunun gücü tükenirse serbest suçlular kazanır: iki savcı da öldüyse ya da hayattaki dedektiflerin işaret hakları
+ * bitip hiçbir aktif işaret serbest bir suçluyu göstermiyorsa. (Son hak doğru kişiye kullanıldıysa savcılara o
+ * işareti değerlendirme şansı kalır.) Savcıların yakalaması sınırsızdır, o yüzden tükenmez.
  */
 export function checkRights(world) {
   if (world.result || !criminals(world).some(active)) return;
   const all = contestants(world);
-  const pros = all.filter(a => a.role === 'prosecutor' && a.alive);
-  if (!pros.length) { finish(world, 'prosecutors'); return; }
-  if (pros.every(p => p.catches <= 0)) { finish(world, 'rights'); return; }
+  if (!all.some(a => a.role === 'prosecutor' && a.alive)) { finish(world, 'prosecutors'); return; }
   const live = [...world.marks].some(([id, m]) => !m.cleared && world.actors[id].role === 'criminal' && active(world.actors[id]));
   if (all.filter(a => a.role === 'detective' && a.alive).every(d => d.marks <= 0) && !live) finish(world, 'marks');
 }

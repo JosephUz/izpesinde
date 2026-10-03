@@ -8,6 +8,7 @@ import { createInput } from './input.js';
 import { gorunurAlanaKilitle } from './gorunur-alan.js';
 import { enterFullscreen, touchDevice } from './touch.js';
 import { createMinimap } from './minimap.js';
+import { createMuzik, sahneSec } from './muzik.js';
 import { createNetClient } from './net/client.js';
 import { onlineEnabled } from './platform.js';
 import { dist, separate } from './physics.js';
@@ -205,11 +206,48 @@ export async function start(root) {
   $('#helpBtn').onclick = () => screens.help();
   $('#pauseBtn').onclick = () => screens.pauseMenu();
   $('#sound').onclick = () => hooks.toggleSound();
+  $('#muzik').onclick = () => hooks.toggleMuzik();
   // F1: kontroller (Çayır Muhafızı'ndaki gibi her ekranda).
   window.addEventListener('keydown', e => { if (e.code === 'F1') { e.preventDefault(); if (!app.inLobby) screens.help(); } });
+
+  // ---------- STANDART üst çubuk: Ses ve Müzik ----------
+  // İkisi bağımsızdır: `Ses` yalnız efektleri (ui.tone), `Müzik` yalnız oyun içi parçaları açıp kapatır. Her iki
+  // düğme de hem üst çubukta hem Esc menüsünde aynı durumu gösterir; durumlar tarayıcıda saklanır (iz.sound, iz.muzik).
+  const muzik = createMuzik(root);
+  try { app.soundOn = localStorage.getItem('iz.sound') === 'on'; } catch { /* yok */ }
   const soundLabel = () => 'Ses: ' + (app.soundOn ? 'açık' : 'kapalı');
-  hooks.toggleSound = () => { app.soundOn = !app.soundOn; $('#sound').textContent = soundLabel(); ui.tone(330, 0.3); return soundLabel(); };
+  const muzikLabel = () => 'Müzik: ' + (muzik.acik ? 'açık' : 'kapalı');
+
+  /** Ses / müzik yazılarını iki yerde birden tazeler: üst çubuk ve (açıksa) Esc menüsü. */
+  function syncMenu() {
+    for (const [sec, yazi, acik] of [['#sound', soundLabel(), app.soundOn], ['#pauseSound', soundLabel(), app.soundOn],
+      ['#muzik', muzikLabel(), muzik.acik], ['#pauseMuzik', muzikLabel(), muzik.acik]]) {
+      const b = $(sec);
+      if (!b) continue;
+      b.textContent = yazi; b.classList.toggle('muted', !acik);
+    }
+    const sur = $('#muzikSes'), yuzde = $('#muzikYuzde'), satir = $('#muzikRow');
+    if (sur) {
+      const v = String(Math.round(muzik.ses * 100));
+      if (sur.value !== v) sur.value = v;
+      yuzde.textContent = v + '%';
+      satir.classList.toggle('off', !muzik.acik);
+    }
+  }
   hooks.soundLabel = soundLabel;
+  hooks.muzikLabel = muzikLabel;
+  hooks.muzikVar = () => !muzik.kapali;
+  hooks.syncMenu = syncMenu;
+  hooks.toggleSound = () => {
+    app.soundOn = !app.soundOn;
+    try { localStorage.setItem('iz.sound', app.soundOn ? 'on' : 'off'); } catch { /* yok */ }
+    syncMenu(); ui.tone(330, 0.3);
+    return soundLabel();
+  };
+  hooks.toggleMuzik = () => { muzik.ac(); syncMenu(); return muzikLabel(); };
+  hooks.setMuzikSes = v => { muzik.sesAyarla(v); syncMenu(); };
+  $('#muzik').hidden = muzik.kapali;
+  syncMenu();
 
   // Çizim alanı pencereyi değil kökü doldurur: telefonda kök görünür alana kilitlidir (adres çubuğu, klavye).
   function resize() {
@@ -277,6 +315,9 @@ export async function start(root) {
       uiClock += dt;
       const tick = uiClock > 0.09;
       if (tick) uiClock = 0;
+      // Müziğin sahnesi: menü / ara pencereler sakin, tur ana tema, turun son dakikası ya da kovalamaca gerilim.
+      // `sahne()` aynı adı yeniden alınca hiçbir şey yapmaz, her tikte sorulması bedavadır (bkz. src/muzik.js).
+      if (tick) muzik.sahne(sahneSec(app.playing, screens.perde, app.world, ui.kovalamaca));
       if (app.playing) {
         if (tick && !app.paused) { ui.update(); minimap.draw(); }
         ui.labels(tick);
@@ -296,6 +337,8 @@ export async function start(root) {
       finish: (kind = 'timeout') => finish(app.world, kind),
       traceArrows: () => effects.arrowsShown(),
       newMatch: hooks.newMatch, pick: hooks.pick, close: screens.close, minimap, net,
+      /** Müziği ölçen test için: hangi sahne / parça çalıyor, düğmeler ne diyor (tests/muzik-smoke.mjs). */
+      muzik: { durum: () => muzik.durum(), ac: v => { muzik.ac(v); syncMenu(); }, perde: () => screens.perde },
       step(seconds) { for (let t = 0; t < seconds; t += 0.05) step(app.world, 0.05); ui.update(); },
       /** Testte oyuncunun rolünü tur içinde değiştirir (hakları da o role göre). */
       setRole(role) { app.world.player.role = role; ui.clear(); ui.update(); },

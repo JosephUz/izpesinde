@@ -52,10 +52,31 @@ tablosu → sonraki tur; beşinci turdan sonra oda lobiye döner. Esc menüsü o
 
 ## Ekranlar
 
-Çayır Muhafızı düzeni. **Giriş**: sağ üstte `← josephuz.com`, Ses ve Kontroller (F1); ad (hatırlanır, ilk girişte
-hazır bir adla gelir), tek sırada **Tek başına**, **Oda kur**, **Odaya katıl**; altında bilgi satırı (çevrim içi sayısı)
-ve 01 / 02 / 03 kural kartları. **Hazırlık**: Tek başına ve Oda kur önce botların zorluğunu sorar (hatırlanır). **Esc
-menüsü**: alt alta Devam, Kontroller, Ses, Ana menü / Odadan çık ve josephuz.com'a dön. **F1** her ekranda kontrolleri açar.
+Çayır Muhafızı düzeni. **Giriş**: sağ üstte [standart üst araç çubuğu](#standart-üst-araç-çubuğu); ad (hatırlanır,
+ilk girişte hazır bir adla gelir), tek sırada **Tek başına**, **Oda kur**, **Odaya katıl**; altında bilgi satırı
+(çevrim içi sayısı) ve 01 / 02 / 03 kural kartları. **Hazırlık**: Tek başına ve Oda kur önce botların zorluğunu sorar
+(hatırlanır). **F1** her ekranda kontrolleri açar.
+
+### Standart üst araç çubuğu
+
+Bütün JosephUz oyunlarında aynı: ana ekranın **sağ üstünde, tek satır**, bu sırayla
+`← josephuz.com` · `Ses: açık/kapalı` · `Müzik: açık/kapalı` · `Kontroller F1`. **Esc menüsü** de standart:
+`DEVAM ET →` · `Kontroller F1` · `Ses: …` · `Müzik: …` (altında müzik sesi sürgüsü) · `Ana menü` (çevrim içinde
+`Odadan çık`) · `josephuz.com'a dön`; alt alta, pencere düğme sütunu kadar dar. İki yerdeki aynı düğme aynı durumu
+gösterir (`src/main.js` → `syncMenu`); durumlar tarayıcıda saklanır (`iz.sound`, `iz.muzik`, `iz.muzik.ses`).
+Ses düğmesi yalnız efektleri, Müzik düğmesi yalnız müziği kapatır — ikisi bağımsızdır. Telefonda dört düğme simgeye
+iner (`←` `🔊` `♫` `?`), sıra ve düğmeler aynı kalır. Yerleşimi `tests/standart-cubuk.mjs`, yazıları ve sırası
+`tests/muzik.test.mjs` denetler.
+
+## Müzik
+
+Üç parça, `muzik/` altında (128 kbps mp3; beste JosephUz, örnekler VSCO 2 CE / CC0 — `muzik/LISANS.txt`):
+**Pazar Meydanı** sakin (menü, hazırlık, lobi, rol seçimi, tur girişi, mola, sonuç), **Gizem** tur sırasında,
+**Suçlu Aramızda** turun son 60 saniyesinde ya da savcının kovalamacasında (ana temayla sırayla). Sahne seçimi saf bir
+işlevdir (`src/muzik.js` → `sahneSec`); çalma `<audio>` öğeleriyle, 1,8 sn çapraz geçişle olur. Düzey efektlerin
+altındadır (varsayılan %35), ilk kullanıcı dokunuşundan sonra başlar, sekme gizlenince durur. Tur parçası ancak tur
+başlarken iner. Otomatik tarayıcıda (`navigator.webdriver`) müzik hiç kurulmaz — `?muzik=1` açar, `?muzik=0` kapatır.
+Testler: `tests/muzik.test.mjs` (tarayıcısız sahne kuralı), `tests/muzik-smoke.mjs` (gerçek tarayıcıda ölçüm).
 
 ## Telefon ve tablet
 
@@ -104,7 +125,8 @@ yumuşatma kapalı, piksel oranı 1, gölge haritası küçüktür. Kök, taray�
 | Tab | Basılı: skor; elenince: izlenen takım arkadaşını değiştir |
 | Esc | Duraklat / devam (çevrim içi odada oyun durmaz) |
 
-Ses sağ üstteki düğmeden açılır (başlangıçta kapalı).
+Efekt sesi sağ üstteki `Ses` düğmesinden açılır (başlangıçta kapalı; seçim saklanır), müzik yanındaki `Müzik`
+düğmesinden (başlangıçta açık). İkisi de Esc menüsünde aynı durumu gösterir.
 
 ## Puanlar
 
@@ -122,12 +144,16 @@ Ses sağ üstteki düğmeden açılır (başlangıçta kapalı).
 
 `npm test`: önce başsız kural testleri (`tests/rules-smoke.mjs`: rol dağıtımı ve seçimi, iz takvimi, izin tam basılan
 noktaya düşmesi ve iki iz türü, sınırsız işaret ve kasabada tek işaret, yakalama, kılık, cinayet ve iki savcının ölümü, puanlar, kutu,
-zıplama/iniş, izleyici, çok insanlı dünya, çevrim içi paketin gizli bilgi taşımaması, beş turluk otomatik maç). Sonra
+zıplama/iniş, izleyici, çok insanlı dünya, çevrim içi paketin gizli bilgi taşımaması, beş turluk otomatik maç) ve
+müziğin sahne kuralı + standart çubuğun yazıları (`tests/muzik.test.mjs`, tarayıcısız). Sonra
 sunucuyu boş bir portta açar (testte tur 25 sn, `IZ_TUR_SN`): çevrim içi duman testi (`tests/online-smoke.mjs`, iki
 WebSocket istemcisi: lobi, koltuk, gizli roller, giriş evresi, hareket, kopup geri dönme, ayrılma), başsız Chromium ile
 tek başına duman testi (`tests/browser-smoke.mjs`: menü, rol seçimi, hareket, görüş sisi, duraklatma, gerçek sol tıkla
 işaret / yakalama / kılık, kenar uyarısı, kutu, sabit nesne saydamlığı, iz oku, skor tablosu, küçük ekran, beş tur
-geçişi) ve iki tarayıcıyla çevrim içi test (`tests/online-browser.mjs`: oda kur, linkle katıl, koltuk, başlat, tur
+geçişi), müzik ölçümü (`tests/muzik-smoke.mjs`: hangi sahnede hangi parça, düğme durduruyor mu, yenilemede korunuyor
+mu, efekt sesinden bağımsız mı — `<audio>` öğelerinin `paused` / `currentTime` değerlerinden), standart üst çubuğun
+yerleşimi (`tests/standart-cubuk.mjs`: masaüstü + üç telefon ölçüsü, Esc menüsü) ve iki tarayıcıyla çevrim içi test
+(`tests/online-browser.mjs`: oda kur, linkle katıl, koltuk, başlat, tur
 girişi, hareket ve öbür ekranda aynı yer, tur sonu, ikinci tur, menü, çıkış). `online-smoke.mjs` canlı sunucuya da
 koşturulabilir: `GAME_URL=https://izpesinde-sunucu.josephuz.com node tests/online-smoke.mjs`. Playwright bu depoya kurulmaz; komşu depolardaki kurulum
 bulunur (bkz. `scripts/test.mjs`). Ekran görüntüleri `artifacts/` altına yazılır.
@@ -157,7 +183,8 @@ yetkili adımda bütün kurallar işler. İstemci modülleri dünyayı yalnızca
 | `src/net/` | Çevrim içi: ortak sözlük (`protocol.js`), ikili karakter paketi (`snapshot.js`), kişiye özel durum (`visibility.js`), istemci: bağlantı, kopya dünya, ara değer, ileri kayma, girdi (`client.js`) |
 | `src/platform.js` | Sunucu adresi (statik sitede `SERVER`, yerelde aynı adres) |
 | `server/rooms.mjs` | Odalar: lobi ve koltuklar, otoriter dünya, tur akışı, kopma / geri dönme, çevrim içi sayısı |
-| `src/screens.js` | Rol seçimi, çevrim içi lobi, tur girişi, kontroller, duraklatma, tur / maç sonu, skor tablosu |
+| `src/screens.js` | Rol seçimi, çevrim içi lobi, tur girişi, kontroller, standart Esc menüsü, tur / maç sonu, skor tablosu |
+| `src/muzik.js` | Oyun içi müzik: sahne seçimi (saf), çapraz geçiş, gerektiğinde yükleme, açma/kapama ve ses düzeyi |
 | `src/ui.js` | HUD, olay günlüğü, bağlam ipucu, eylem çubuğu, dünya etiketleri, savcı okları, kenar uyarısı, ses |
 | `src/input.js` | Klavye / fare, imleçle hedef seçme; dokunmatikte joystick, dokunarak hedef, düğmeler |
 | `src/touch.js`, `src/gorunur-alan.js` | Dokunmatik katman (joystick, düğmeler, tam ekran) ve telefonda görünür alan kilidi |

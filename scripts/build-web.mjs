@@ -14,5 +14,7 @@ await rm(dist, { recursive: true, force: true });
 await mkdir(path.join(dist, 'vendor'), { recursive: true });
 for (const f of ['index.html', 'style.css', 'game.js']) await cp(path.join(root, f), path.join(dist, f));
 await cp(path.join(root, 'src'), path.join(dist, 'src'), { recursive: true });
+// Oyun içi müzik (src/muzik.js göreli `muzik/...` yolundan ister): parçalar ve lisans metni yayına girer.
+await cp(path.join(root, 'muzik'), path.join(dist, 'muzik'), { recursive: true });
 for (const f of ['three.module.js', 'three.core.js']) await cp(path.join(three, f), path.join(dist, 'vendor', f));
 console.log('dist/ hazır');

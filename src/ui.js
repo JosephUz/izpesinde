@@ -166,5 +166,7 @@ export function createUI(root, app, hooks) {
       pool(els.labels, labels); pool(els.chase, arrows);
     },
     clear() { pool(els.labels, []); pool(els.chase, []); els.alert.classList.remove('on'); actionRole = ''; },
+    /** Kovalamaca sürüyor mu: savcının ekran kenarındaki işaret okları görünüyor. Müziğin gerilim sahnesi buna bakar. */
+    get kovalamaca() { return els.chase.childElementCount > 0; },
   };
 }

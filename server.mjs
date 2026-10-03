@@ -22,6 +22,8 @@ const types = {
   '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.mp3': 'audio/mpeg',
+  '.txt': 'text/plain; charset=utf-8',
 };
 const rootFiles = ['index.html', 'style.css', 'game.js'];
 /** Oyun dosyaları önbelleğe alınmaz: tek bir sürüm vardır ve güncelleme anında geçmelidir. */
@@ -53,7 +55,8 @@ function resolveFile(pathname) {
     const file = path.join(vendorDir, path.basename(rel));
     return file.startsWith(vendorDir) ? file : null;
   }
-  if (rootFiles.includes(rel) || rel.startsWith('src' + path.sep) || rel.startsWith('src/')) {
+  // src/ (oyun kaynağı) ve muzik/ (oyun içi parçalar, src/muzik.js) dışında hiçbir klasör verilmez.
+  if (rootFiles.includes(rel) || /^(src|muzik)[/\\]/.test(rel)) {
     const file = path.join(root, rel);
     return file.startsWith(root) ? file : null;
   }

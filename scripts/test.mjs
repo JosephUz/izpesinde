@@ -14,7 +14,8 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TESTLER = ['tests/rules-smoke.mjs', 'tests/online-smoke.mjs', 'tests/browser-smoke.mjs', 'tests/touch-smoke.mjs', 'tests/online-browser.mjs'];
+const TESTLER = ['tests/rules-smoke.mjs', 'tests/muzik.test.mjs', 'tests/online-smoke.mjs', 'tests/browser-smoke.mjs',
+  'tests/touch-smoke.mjs', 'tests/muzik-smoke.mjs', 'tests/standart-cubuk.mjs', 'tests/online-browser.mjs'];
 
 /** İşletim sisteminin verdiği boş bir port: sabit 5197 başka bir sunucuda (ör. Docker) açık olabilir. */
 const bosPort = () => new Promise((çöz, hata) => {

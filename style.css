@@ -123,3 +123,9 @@ body.playing #iz-game.touch #toptools,body.playing #iz-game.touch #brand,#iz-gam
 #iz-game.touch #mapcard{width:124px}#iz-game.touch .tbtn[data-t=jump]{bottom:calc(118px + var(--bottom))}
 @media (max-height:500px){#menu{top:calc(66px + var(--top))}#menu>.eyebrow:first-child,#scene-caption,.home-meta span:not(#online){display:none!important}#menu h1{font-size:30px;margin:2px 0 10px}#brand{top:14px}#toptools{top:14px}#nick{margin:6px 0 10px;padding:9px 12px}#home-buttons .primary{padding:13px 18px}.home-meta{margin-top:8px}#menu-footer{bottom:10px}}
 #iz-game.touch #toptools kbd{display:none}
+/* Yatay telefonda bağlantı öbür oyunlardaki gibi yazıyla kalır ("← josephuz.com"); dikey telefonda yer yok, ok simgesi. */
+@media (max-height:560px) and (min-width:651px){
+#toptools #homeLink{font-size:10px;width:auto;padding:0 10px}
+#toptools #homeLink::before{content:none}
+#toptools #homeLink .site-name{display:inline}
+}

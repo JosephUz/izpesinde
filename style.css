@@ -35,7 +35,10 @@
 .rule-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px;width:min(470px,100%)}.rule-cards div{border-top:1px solid var(--line);padding-top:10px}.rule-cards b{display:block;font-size:9px;letter-spacing:1.6px;color:var(--gold);margin-bottom:6px}.rule-cards span{font-size:11px;line-height:1.5;color:#c3cbb7}
 #menu{width:470px}#nick{width:min(470px,100%)}
 #toptools .icon{text-decoration:none;display:inline-flex;align-items:center;gap:8px}#toptools kbd,.menu-stack kbd{font:9px Segoe UI,sans-serif;border:1px solid var(--line);padding:1px 5px;color:var(--gold)}body.playing #homeLink{display:none}
-.menu-stack{display:flex;flex-direction:column;gap:8px;margin-top:22px;width:min(340px,100%)}.menu-stack>*{width:100%;text-align:center;text-decoration:none;display:flex;justify-content:center;align-items:center;gap:8px;min-width:0}
+/* Esc menüsü gibi yalnız düğme sütunu olan pencereler sütun kadar dar olsun (670 px pencerede sağ yarı boş kalıyordu) */
+.dialog:has(> .menu-stack){width:min(436px,92vw)}
+.menu-stack{display:flex;flex-direction:column;gap:8px;margin-top:22px;width:min(340px,100%)}
+.dialog > .menu-stack{width:100%}.menu-stack>*{width:100%;text-align:center;text-decoration:none;display:flex;justify-content:center;align-items:center;gap:8px;min-width:0}
 .buttons a.secondary{text-decoration:none;display:inline-flex;align-items:center}
 .setup-levels{margin:10px 0 6px}
 @media (max-height:820px){.rule-cards{margin-top:18px}}

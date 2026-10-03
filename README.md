@@ -50,6 +50,13 @@ tablosu → sonraki tur; beşinci turdan sonra oda lobiye döner. Esc menüsü o
 - `/health`: `{ oyun, rooms, online, inRoom, surum }`; `online` siteyi açık tutan sekme sayısıdır (menünün alt
   bilgisinde "● N çevrim içi", josephuz.com'da da görünür).
 
+## Ekranlar
+
+Çayır Muhafızı düzeni. **Giriş**: sağ üstte `← josephuz.com`, Ses ve Kontroller (F1); ad (hatırlanır, ilk girişte
+hazır bir adla gelir), tek sırada **Tek başına**, **Oda kur**, **Odaya katıl**; altında bilgi satırı (çevrim içi sayısı)
+ve 01 / 02 / 03 kural kartları. **Hazırlık**: Tek başına ve Oda kur önce botların zorluğunu sorar (hatırlanır). **Esc
+menüsü**: alt alta Devam, Kontroller, Ses, Ana menü / Odadan çık ve josephuz.com'a dön. **F1** her ekranda kontrolleri açar.
+
 ## Bir tur
 
 1. **Rol seçimi** (tek başına): üç karttan birini seç. Botlar kalan rolleri paylaşır; her tur 2 suçlu, 6 dedektif,

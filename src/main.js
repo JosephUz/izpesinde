@@ -104,13 +104,16 @@ export async function start(root) {
     sound: type => ui.tone(type === 'use' ? 520 : 330, 0.08),
   });
 
-  $('#start').onclick = () => hooks.newMatch();
+  // Tek başına / Oda kur: önce hazırlık penceresi (botların zorluğu), sonra maç ya da oda.
+  $('#start').onclick = () => screens.setup('solo', level => { app.level = level; hooks.newMatch(); });
 
   // ---------- Çevrim içi ----------
   const networked = onlineEnabled();
   let pendingRoom = null;
   const nick = () => { const v = $('#nick').value.trim().slice(0, 16); try { localStorage.setItem('iz.nick', v); } catch { /* yok */ } return v; };
+  // Ad hatırlanır; ilk girişte hazır bir adla gelir (boş adla odaya girilmez).
   try { $('#nick').value = localStorage.getItem('iz.nick') || ''; } catch { /* yok */ }
+  if (!$('#nick').value) $('#nick').value = `İzci-${Math.floor(1000 + Math.random() * 9000)}`;
   function showMenu(on) {
     for (const id of ['#menu', '#scene-caption', '#menu-footer']) $(id).hidden = !on;
     document.body.classList.toggle('playing', !on && app.playing);
@@ -164,7 +167,7 @@ export async function start(root) {
     if (net.connected) net.hello(name); else net.connect(name);
   };
   for (const id of ['#create', '#join']) $(id).dataset.label = $(id).textContent;
-  $('#create').onclick = () => goOnline({ create: true });
+  $('#create').onclick = () => { if (!nick()) { goOnline({}); return; } screens.setup('room', level => { app.level = level; goOnline({ create: true }); }); };
   $('#join').onclick = () => { $('#join-row').hidden = false; $('#code').focus(); };
   const joinCode = () => { const code = $('#code').value.trim().toUpperCase(); if (code) goOnline({ code }); };
   $('#joinGo').onclick = joinCode;
@@ -178,10 +181,12 @@ export async function start(root) {
   } else for (const id of ['#create', '#join']) $(id).hidden = true;
   $('#helpBtn').onclick = () => screens.help();
   $('#pauseBtn').onclick = () => screens.pauseMenu();
-  $('#sound').onclick = () => { app.soundOn = !app.soundOn; $('#sound').textContent = 'Ses: ' + (app.soundOn ? 'açık' : 'kapalı'); ui.tone(330, 0.3); };
-  root.querySelectorAll('[data-level]').forEach(b => {
-    b.onclick = () => { app.level = b.dataset.level; root.querySelectorAll('[data-level]').forEach(x => x.classList.toggle('selected', x.dataset.level === app.level)); };
-  });
+  $('#sound').onclick = () => hooks.toggleSound();
+  // F1: kontroller (Çayır Muhafızı'ndaki gibi her ekranda).
+  window.addEventListener('keydown', e => { if (e.code === 'F1') { e.preventDefault(); if (!app.inLobby) screens.help(); } });
+  const soundLabel = () => 'Ses: ' + (app.soundOn ? 'açık' : 'kapalı');
+  hooks.toggleSound = () => { app.soundOn = !app.soundOn; $('#sound').textContent = soundLabel(); ui.tone(330, 0.3); return soundLabel(); };
+  hooks.soundLabel = soundLabel;
 
   function resize() {
     app.w = innerWidth; app.h = innerHeight;

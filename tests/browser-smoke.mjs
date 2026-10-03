@@ -20,7 +20,12 @@ try {
   await page.screenshot({ path: 'artifacts/menu.png' });
 
   // Rol seçimi: her turun başında üç kart; seçilen rol oyuncuya verilir.
+  // Tek başına: önce hazırlık penceresi (botların zorluğu), sonra rol seçimi.
   await page.click('#start');
+  await page.waitForSelector('#setupGo');
+  await page.click('[data-setup-level="easy"]');
+  await page.screenshot({ path: 'artifacts/setup.png' });
+  await page.click('#setupGo');
   await page.waitForSelector('[data-role="detective"]');
   await page.screenshot({ path: 'artifacts/role.png' });
   await page.keyboard.press('Escape');

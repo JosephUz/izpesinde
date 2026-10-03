@@ -23,6 +23,7 @@ try {
   await a.fill('#nick', 'Ayşe');
   await a.waitForFunction(() => !document.querySelector('#create').disabled, null, { timeout: 8000 });
   await a.click('#create');
+  await a.click('#setupGo');
   await a.waitForSelector('.room-code');
   const code = (await a.textContent('.room-code')).trim();
   assert.match(code, /^[A-Z]{4}-\d$/);
@@ -77,9 +78,11 @@ try {
   assert.match(await a.textContent('#round'), /TUR 02/);
   await a.waitForFunction(() => document.querySelector('#overlay').hidden, null, { timeout: 9000 });
 
-  // Çevrim içi menü oyunu durdurmaz; odadan çıkan ana menüye döner.
+  // Çevrim içi menü oyunu durdurmaz (Çayır Muhafızı düzeni: alt alta düğmeler, josephuz.com'a dönüş); odadan çıkan ana menüye döner.
   await a.keyboard.press('Escape');
   await a.waitForSelector('text=Kasaba durmuyor.');
+  assert.equal(await a.locator('.menu-stack a[href="https://www.josephuz.com/"]').count(), 1, "menüde josephuz.com'a dönüş");
+  await a.screenshot({ path: 'artifacts/online-menu.png' });
   const t0 = await b.evaluate(() => window.__iz.world.time);
   await b.waitForTimeout(600);
   assert.ok(await b.evaluate(() => window.__iz.world.time) > t0 + 0.3, 'menü açıkken oyun sürer');

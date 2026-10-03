@@ -29,3 +29,17 @@
 @media (max-height:1150px){.match-facts,.menu-rule{display:none}#menu h1{margin:18px 0 16px}.intro{margin-bottom:18px}}
 @media (max-height:820px){#menu .intro{display:none}#menu h1{font-size:clamp(36px,7.4vh,64px)}#menu{top:16%}#nick,#code{margin:8px 0 12px}#difficulties{margin:8px 0 12px}}
 @media (max-height:640px){#menu{top:13%}#menu h1{font-size:34px;margin:10px 0}.menu-note{display:none}}
+
+#home-buttons{display:flex;gap:8px;margin-top:4px;width:min(470px,100%)}#home-buttons #start{width:auto;min-width:0;flex:1.6}#home-buttons .secondary{flex:1;letter-spacing:1.5px;white-space:nowrap}#home-buttons .secondary:disabled{opacity:.55;cursor:default;filter:none}#join-row{width:min(470px,100%)}
+.home-meta{display:flex;gap:22px;margin:14px 0 0;font-size:9px;letter-spacing:1.8px;color:var(--muted)}.home-meta #online{color:#9fd99a;letter-spacing:.5px;font-size:11px}
+.rule-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px;width:min(470px,100%)}.rule-cards div{border-top:1px solid var(--line);padding-top:10px}.rule-cards b{display:block;font-size:9px;letter-spacing:1.6px;color:var(--gold);margin-bottom:6px}.rule-cards span{font-size:11px;line-height:1.5;color:#c3cbb7}
+#menu{width:470px}#nick{width:min(470px,100%)}
+#toptools .icon{text-decoration:none;display:inline-flex;align-items:center;gap:8px}#toptools kbd,.menu-stack kbd{font:9px Segoe UI,sans-serif;border:1px solid var(--line);padding:1px 5px;color:var(--gold)}body.playing #homeLink{display:none}
+.menu-stack{display:flex;flex-direction:column;gap:8px;margin-top:22px;width:min(340px,100%)}.menu-stack>*{width:100%;text-align:center;text-decoration:none;display:flex;justify-content:center;align-items:center;gap:8px;min-width:0}
+.buttons a.secondary{text-decoration:none;display:inline-flex;align-items:center}
+.setup-levels{margin:10px 0 6px}
+@media (max-height:820px){.rule-cards{margin-top:18px}}
+@media (max-height:700px){.rule-cards{display:none}}
+@media (max-width:760px){#menu{width:90%}#home-buttons{flex-wrap:wrap}#home-buttons #start{flex-basis:100%}.rule-cards{grid-template-columns:1fr 1fr 1fr;gap:10px}#toptools #sound{display:none}}
+a.secondary,a.secondary:visited{color:var(--paper)}#toptools a.icon,#toptools a.icon:visited{color:var(--paper)}
+@media (max-width:760px){#toptools #helpBtn{display:none}.home-meta{flex-wrap:wrap;gap:6px 16px}}

@@ -94,11 +94,15 @@ export function createScreens(root, app, hooks) {
     };
   }
 
+  /** Esc menüsü (Çayır Muhafızı düzeni): alt alta Devam, Kontroller, Ses, çıkış ve josephuz.com'a dönüş. */
   function pauseMenu() {
     if (!app.playing) return;
     app.paused = true;
-    if (app.online) show(`<span class="eyebrow">ÇEVRİM İÇİ ODA</span><h2>Kasaba durmuyor.</h2><p>Başkalarının oyunu sürüyor; bu ekran açıkken karakterin yerinde durur. Odadan çıkarsan karakterini tur sonuna kadar bir bot yönetir.</p><div class="buttons"><button class="primary" id="resume">DEVAM ET →</button><button class="secondary" id="pauseHelp">Kontroller</button><button class="secondary" id="quit">Odadan çık</button></div>`);
-    else show(`<span class="eyebrow">ZAMAN SENİ BEKLİYOR</span><h2>Bir nefes arası.</h2><p>Kasaba duraklatıldı.</p><div class="buttons"><button class="primary" id="resume">DEVAM ET →</button><button class="secondary" id="pauseHelp">Kontroller</button><button class="secondary" id="quit">Ana menü</button></div>`);
+    const head = app.online
+      ? '<span class="eyebrow">ÇEVRİM İÇİ ODA</span><h2>Kasaba durmuyor.</h2><p>Bu ekran açıkken karakterin yerinde durur. Odadan çıkarsan karakterini tur sonuna kadar bir bot yönetir.</p>'
+      : '<span class="eyebrow">ZAMAN SENİ BEKLİYOR</span><h2>Bir nefes arası.</h2><p>Kasaba duraklatıldı.</p>';
+    show(`${head}<div class="menu-stack"><button class="primary" id="resume">DEVAM ET →</button><button class="secondary" id="pauseHelp">Kontroller <kbd>F1</kbd></button><button class="secondary" id="pauseSound">${hooks.soundLabel()}</button><button class="secondary" id="quit">${app.online ? 'Odadan çık' : 'Ana menü'}</button><a class="secondary" href="https://www.josephuz.com/">josephuz.com'a dön</a></div>`);
+    $('#pauseSound').onclick = () => { $('#pauseSound').textContent = hooks.toggleSound(); };
     $('#resume').onclick = close;
     $('#pauseHelp').onclick = () => help();
     $('#quit').onclick = () => { overlay.hidden = true; hooks.quit(); };
@@ -112,7 +116,7 @@ export function createScreens(root, app, hooks) {
     const note = final ? `${winners} · ${max} puan ${winners.includes(',') ? '· Ortak birincilik' : ''}` : `Bu tur ${signed(world.result.points[world.player.id])} puan · Toplam ${world.scores[world.player.id]}`;
     // Çevrim içi: sonraki tur sunucunun saatiyle kendiliğinden başlar; maç sonunda oda lobiye döner.
     const next = !app.online ? `<button class="primary" id="next">${final ? 'YENİ BİR HİKÂYE' : 'SONRAKİ TUR'} →</button>`
-      : final ? '<button class="primary" id="next">LOBİYE DÖN →</button><button class="secondary" id="quit">Ana menü</button>' : '<p class="result-note" id="nextLeft"></p>';
+      : final ? '<button class="primary" id="next">LOBİYE DÖN →</button><button class="secondary" id="quit">Ana menü</button><a class="secondary" href="https://www.josephuz.com/">josephuz.com</a>' : '<p class="result-note" id="nextLeft"></p>';
     show(`<span class="eyebrow">${final ? 'BEŞ DOSYA KAPANDI · MAÇ SONU' : 'DOSYA KAPANDI · TUR ' + world.round}</span><h2>${final ? 'Kasaba seni hatırlayacak.' : title}</h2><p>${desc}</p><p class="result-note">${note}</p>${scoreTable(true)}<div class="buttons">${next}</div>`);
     if (app.online) { tickOnline(); if (final) { $('#next').onclick = () => hooks.lobbyBack(); $('#quit').onclick = () => { overlay.hidden = true; hooks.quit(); }; } return; }
     $('#next').onclick = () => (final ? hooks.newMatch() : roleChoice(world.round + 1));
@@ -147,5 +151,23 @@ export function createScreens(root, app, hooks) {
     $('#roomLeave').onclick = () => hooks.leaveRoom();
   }
 
-  return { roleChoice, roundIntro, help, pauseMenu, showResult, scoreToggle, close, lobby, tickOnline, get open() { return !overlay.hidden; } };
+  /**
+   * Hazırlık (Çayır Muhafızı'ndaki kurulum ekranı gibi): Tek başına ve Oda kur'dan önce botların zorluğu seçilir.
+   * Seçim tarayıcıda hatırlanır. Esc ya da Geri ana menüye döner.
+   */
+  function setup(kind, go) {
+    let level = 'normal';
+    try { level = localStorage.getItem('iz.level') || 'normal'; } catch { /* yok */ }
+    if (!LEVELS[level]) level = 'normal';
+    const pick = Object.entries(LEVELS).map(([k, v]) => `<button data-setup-level="${k}" class="${k === level ? 'selected' : ''}">${v.label}</button>`).join('');
+    show(`<span class="eyebrow">${kind === 'room' ? 'ÇEVRİM İÇİ ODA' : 'TEK BAŞINA · 9 BOT'}</span><h2>${kind === 'room' ? 'Oda kur' : 'Kasabaya hazırlan'}</h2><p>${kind === 'room' ? 'Boş koltukları botlar doldurur; zorluğu lobide de değiştirebilirsin. Taraf yok, roller her tur rastgele.' : 'Rolünü her tur sen seçersin; kalan rolleri botlar paylaşır. Beş tur, en yüksek kişisel skor kazanır.'}</p><span class="eyebrow">BOTLARIN ZORLUĞU</span><div class="lobby-levels setup-levels">${pick}</div><div class="buttons"><button class="primary" id="setupGo">${kind === 'room' ? 'ODAYI KUR' : 'KASABAYA GİR'} →</button><button class="secondary" id="setupBack">Geri</button></div>`);
+    overlay.querySelectorAll('[data-setup-level]').forEach(b => {
+      b.onclick = () => { level = b.dataset.setupLevel; overlay.querySelectorAll('[data-setup-level]').forEach(x => x.classList.toggle('selected', x === b)); };
+    });
+    $('#setupGo').onclick = () => { try { localStorage.setItem('iz.level', level); } catch { /* yok */ } overlay.hidden = true; go(level); };
+    $('#setupBack').onclick = () => { overlay.hidden = true; };
+    $('#setupGo').focus();
+  }
+
+  return { roleChoice, roundIntro, help, pauseMenu, showResult, scoreToggle, close, lobby, tickOnline, setup, get open() { return !overlay.hidden; } };
 }

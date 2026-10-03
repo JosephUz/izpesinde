@@ -2,7 +2,7 @@ import { CFG, ROLE } from './config.js';
 import { crateNear } from './crowd.js';
 import { circleOf, markBy, marksFor, revealedProsecutors } from './marks.js';
 import { dist, visible } from './physics.js';
-import { active, criminals } from './roster.js';
+import { active, contestants, criminals } from './roster.js';
 import { objectiveOf } from './screens.js';
 import { spectate } from './world.js';
 
@@ -39,7 +39,7 @@ export function createUI(root, app, hooks) {
   const $ = s => root.querySelector(s);
   const els = {
     round: $('#round'), timer: $('#timer'), score: $('#score'), role: $('#role'), objective: $('#objective'), metrics: $('#rolemetrics'),
-    clues: $('#clues'), status: $('#clueStatus'), log: $('#eventlog'), context: $('#context'), actions: $('#actionbar'),
+    clues: $('#clues'), pros: $('#pros'), dets: $('#dets'), status: $('#clueStatus'), log: $('#eventlog'), context: $('#context'), actions: $('#actionbar'),
     alert: $('#alert'), spectator: $('#spectator'), labels: $('#labels'), chase: $('#chase'), toast: $('#toast'),
   };
   let audio = null, toastTimer = 0, lastSound = 0, actionRole = '', contextAt = 0, sight = new Map();
@@ -115,6 +115,10 @@ export function createUI(root, app, hooks) {
       // Çevrim içi kopyada roller gizli: serbest suçlu bayrakları sunucudan gelir.
       const free = world.remote ? world.crim.map(Boolean) : criminals(world).map(active);
       setHTML(els.clues, free.map(f => (f ? '<span title="Serbest">◇</span>' : '<span class="processed" title="Yakalandı">✓</span>')).join(''));
+      // Kanun: kaç savcı / dedektif yaşıyor (sıra kimliği ele vermesin diye önce yaşayanlar, sonra ölenler ✗).
+      const [pros, dets] = world.remote ? world.law : ['prosecutor', 'detective'].map(r => contestants(world).filter(a => a.role === r && a.alive).length);
+      const boxes = (alive, n) => Array.from({ length: n }, (_, i) => (i < alive ? '<span title="Hayatta">◇</span>' : '<span class="dead" title="Öldü">✗</span>')).join('');
+      setHTML(els.pros, boxes(pros, 2)); setHTML(els.dets, boxes(dets, 6));
       els.status.textContent = `Serbest suçlu ${free.filter(Boolean).length}/2 · Kasabada işaret ${world.marks.size ? 'var' : 'yok'}`;
       eventLog(world);
       // Kalabalık geçerken ipucu hızla değişmesin: imleçte hedef yoksa her ipucu en az 0,45 sn kalır.
@@ -125,7 +129,7 @@ export function createUI(root, app, hooks) {
         const off = type === 'dash' ? p.dashCd > 0 : p.role === 'criminal' ? p.killCd > 0 : false;
         els.actions.querySelector(`[data-action="${type}"]`)?.classList.toggle('cooldown', off);
       }
-      els.spectator.hidden = active(p);
+      els.spectator.hidden = active(p) || app.fateHold;
       if (!active(p)) {
         const t = spectate(world, app.spectator);
         app.spectator = t?.id || 0;

@@ -10,7 +10,7 @@ import { carry, dash, followPath, jump, move } from '../src/crowd.js';
 import { REGIONS } from '../src/environment.js';
 import { arrest, caughtNow, mark, marksFor } from '../src/marks.js';
 import { blocked, dist, safe } from '../src/physics.js';
-import { contestants, emit } from '../src/roster.js';
+import { contestants, emit, sees } from '../src/roster.js';
 import { roundFor, stateFor } from '../src/net/visibility.js';
 import { finish } from '../src/score.js';
 import { traceEvery, traceLag } from '../src/traces.js';
@@ -92,6 +92,18 @@ test('İşaret sınırsız, kasabada tek işaret: yeni işaret kendi ve başkala
   finish(w, 'timeout');
   assert.equal(w.result.points[d.id], 5 * S.wrongMark, 'her yanlış işaret −1 (tur sonunda)');
   assert.equal(w.result.points[e.id], 4 * S.wrongMark);
+});
+
+test('Dedektif görüş alanındaki herkesi uzaktan işaretler; görüş dışını işaretleyemez', () => {
+  const w = setup(), [d] = role(w, 'detective'), n = civilian(w);
+  assert.equal(CFG.markRange, CFG.vision);
+  // Arada bina olmayan, 20+ birim uzak bir yer bul.
+  const spot = [...Array(72).keys()].map(i => ({ x: d.x + Math.cos(i / 72 * Math.PI * 2) * 24, z: d.z + Math.sin(i / 72 * Math.PI * 2) * 24 }))
+    .find(q => !blocked(w.env, q.x, q.z) && sees(w, d, q));
+  assert.ok(spot, 'açık bir görüş hattı var');
+  Object.assign(n, spot); assert.ok(mark(w, d, n), '24 birim uzaktan işaretler');
+  const far = w.actors[21]; far.x = d.x + CFG.vision + 3; far.z = d.z;
+  assert.equal(mark(w, d, far), false, 'görüş dışı işaretlenemez');
 });
 
 test('Başka dedektif aynı kişiyi işaretlerse eski sahibine uyarı gider', () => {

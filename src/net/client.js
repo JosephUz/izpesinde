@@ -69,7 +69,7 @@ export function createNetClient(hooks) {
       remote: true, env, humans: new Set([msg.you]), names: msg.names, round: msg.round, seconds: msg.seconds, scores: msg.scores, history: msg.history,
       result: null, final: false, nextAt: 0, time: 0, events: [], serial: 0, effects: [], traces: [], marks: new Map(), revealed: new Map(),
       ghosts: [], tally: Array(10).fill(0), crates: env.crates.map(c => ({ ...c, carrier: null })), eyesId: msg.you,
-      crim: [1, 1], phase: msg.phase, left: msg.left, leftAt: performance.now(),
+      crim: [1, 1], law: [2, 6], phase: msg.phase, left: msg.left, leftAt: performance.now(),
       actors: Array.from({ length: n }, (_, id) => ({
         id, name: id < 10 ? msg.names[id] : 'Kasabalı', role: undefined, x: 0, z: 0, y: 0, facing: 0, speed: 0, appearance: 0, hat: 0,
         alive: true, caught: false, carry: false, action: null, wait: 0, known: new Set(), dashCd: 0, killCd: 0, disguiseCd: 0, crate: null,
@@ -107,7 +107,7 @@ export function createNetClient(hooks) {
     w.traces = st.tr.map(([id, x, z, dir, born]) => ({ id, x, z, dir, born, role: me.role }));
     w.revealed = new Map(st.rev);
     st.crates.forEach(([x, z, carrier], i) => { if (w.crates[i]) Object.assign(w.crates[i], { x, z, carrier: carrier < 0 ? null : carrier }); });
-    w.crim = st.crim;
+    w.crim = st.crim; w.law = st.law;
     for (const [id, text, kind, time] of st.ev) if (!w.events.some(e => e.id === id)) w.events.push({ id, text, kind, time, to: null });
     if (w.events.length > 60) w.events.splice(0, w.events.length - 60);
   }

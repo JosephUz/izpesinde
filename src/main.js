@@ -14,6 +14,7 @@ import { onlineEnabled } from './platform.js';
 import { dist, separate } from './physics.js';
 import { createScreens } from './screens.js';
 import { createUI } from './ui.js';
+import { active } from './roster.js';
 import { createEffectsView } from './view/effects.js';
 import { createCrateView } from './view/itemview.js';
 import { createMeshKit } from './view/meshes.js';
@@ -277,6 +278,43 @@ export async function start(root) {
     if (world.player && world.player.role !== touchRole) { touchRole = world.player.role; input.touchRole(touchRole); }
   }
 
+  /**
+   * Yakalanma / öldürülme sahnesi: oyuncu bu turda elenince kamera FATE.hold saniye kendi karakterine yaklaşır, 3B
+   * animasyon oynar (yakalanınca tepeden demir kafes iner, öldürülünce karakter yere yığılır ve kan göleti yayılır) ve
+   * ekranda bir açılır kart (#fate) belirir. Sonra izleyici kamerasına geçilir. Tur sonu ekranı sahne bitene kadar bekler.
+   */
+  const FATE = { hold: 3.4, card: 5.5, zoom: 11 };
+  const FATE_TEXT = {
+    caught: ['BU TUR SENİN İÇİN BİTTİ', 'Yakalandın', 'Bir savcı seni kalabalığın içinden çekip aldı. Turun sonuna kadar takım arkadaşını izleyebilirsin.'],
+    murder: ['BU TUR SENİN İÇİN BİTTİ', 'Öldürüldün', 'Kalabalıktaki suçlulardan biri seni buldu. Turun sonuna kadar takım arkadaşlarını izleyebilirsin.'],
+  };
+  let fateWorld = null, fateRound = 0, wasActive = null, fateHide = 0;
+  app.fate = null;
+  function fateCard(kind) {
+    const card = $('#fate'), flash = $('#fateFlash'), [eyebrow, title, text] = FATE_TEXT[kind];
+    card.className = kind; card.hidden = false;
+    card.querySelector('.eyebrow').textContent = eyebrow; card.querySelector('h2').textContent = title; card.querySelector('p').textContent = text;
+    card.querySelector('.fate-art').innerHTML = kind === 'caught' ? '<i></i>'.repeat(7) + '<b></b>' : '<i></i><b></b><b></b><b></b>';
+    flash.className = kind; void flash.offsetWidth; flash.classList.add('on');
+    clearTimeout(fateHide); fateHide = setTimeout(() => { card.hidden = true; }, FATE.card * 1000);
+    ui.tone(kind === 'caught' ? 180 : 120, 0.5);
+  }
+  function fateClear() { app.fate = null; app.fateHold = false; clearTimeout(fateHide); $('#fate').hidden = true; $('#fateFlash').className = ''; }
+  $('#fateClose').onclick = () => { if (app.fate) app.fate.at = -1e9; $('#fate').hidden = true; };
+  function fateUpdate(world, time) {
+    if (world !== fateWorld || world.round !== fateRound || !app.playing) { fateWorld = world; fateRound = world.round; wasActive = null; if (app.fate) fateClear(); }
+    const p = world.player;
+    if (!app.playing || !p) return;
+    const on = active(p);
+    if (wasActive && !on && !app.fate) {
+      app.fate = { kind: p.caught ? 'caught' : 'murder', at: time, id: p.id };
+      fateCard(app.fate.kind);
+    }
+    wasActive = on;
+    if (app.fate) app.fate.t = time - app.fate.at;
+    app.fateHold = Boolean(app.fate && app.fate.t < FATE.hold);
+  }
+
   let last = performance.now(), uiClock = 0;
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000), time = now / 1000;
@@ -286,17 +324,21 @@ export async function start(root) {
       if (app.online) {
         // Çevrim içi: simülasyon sunucuda; burada yalnızca ara değer, kendi karakterinin ileri kayması ve girdi gönderimi.
         net.update(dt, input.take(), app.paused || !$('#scores').hidden);
-        if (world.result) screens.showResult();
+        fateUpdate(world, time);
+        if (world.result && !app.fateHold) { $('#fate').hidden = true; screens.showResult(); }
         screens.tickOnline();
-      } else if (app.playing && !app.paused) { step(world, dt, input.take()); if (world.result) screens.showResult(); }
+      } else if (app.playing && !app.paused) { step(world, dt, input.take()); fateUpdate(world, time); if (world.result && !app.fateHold) { $('#fate').hidden = true; screens.showResult(); } }
       else if (!app.playing) menuStep(world, dt);
       input.pickHover();
       if (touch) syncTouch(world);
-      const eyes = app.playing ? spectate(world, app.spectator) : null;
+      if (!app.online && (!app.playing || app.paused)) fateUpdate(world, time);
+      // Elenme sahnesinde kamera oyuncunun kendi (yakalanmış / ölü) karakterindedir.
+      const eyes = app.playing ? (app.fateHold ? world.actors[app.fate.id] : spectate(world, app.spectator)) : null;
       // Kamera: oyunda izlenen karaktere yakın, menüde kasabanın üstünde geniş.
       if (eyes) focus.lerp(new T.Vector3(eyes.x, 0, eyes.z), 1 - Math.exp(-CAMERA.follow * dt));
       else if (!app.playing) focus.lerp(new T.Vector3(-7, 0, 1), 0.02);
-      app.zoom += ((app.playing ? app.zoomPlay : CAMERA.zoomMenu) - app.zoom) * Math.min(1, dt * (app.playing ? 3 : 2));
+      const zoomTo = app.playing ? (app.fateHold ? Math.min(app.zoomPlay, FATE.zoom) : app.zoomPlay) : CAMERA.zoomMenu;
+      app.zoom += (zoomTo - app.zoom) * Math.min(1, dt * (app.fateHold ? 4 : app.playing ? 3 : 2));
       const aspect = app.w / app.h;
       Object.assign(camera, { left: -app.zoom * aspect, right: app.zoom * aspect, top: app.zoom, bottom: -app.zoom });
       camera.updateProjectionMatrix();
@@ -305,8 +347,8 @@ export async function start(root) {
       fog.update(eyes, dt);
       for (const s of town.signs) s.visible = !eyes || dist(s.position, eyes) <= CFG.vision + 0.5;
       for (const m of town.windmills) m.rotation.z += dt * 0.24;
-      characters.sync(world, eyes, app.playing, time, app.hover?.id ?? null, focus);
-      effects.sync(world, eyes, app.playing, time);
+      characters.sync(world, eyes, app.playing, time, app.hover?.id ?? null, focus, app.fate);
+      effects.sync(world, eyes, app.playing, time, app.hover, app.fate);
       crates.sync(world);
       town.xray.update(world, eyes, dt);
       renderer.render(scene, camera);
@@ -336,6 +378,8 @@ export async function start(root) {
       get world() { return app.world; }, get app() { return { ...app, fogNear: () => scene.fog.near }; }, renderer, characters, town,
       finish: (kind = 'timeout') => finish(app.world, kind),
       traceArrows: () => effects.arrowsShown(),
+      reachRing: () => effects.reachShown(),
+      fateParts: () => effects.fateShown(),
       newMatch: hooks.newMatch, pick: hooks.pick, close: screens.close, minimap, net,
       /** Müziği ölçen test için: hangi sahne / parça çalıyor, düğmeler ne diyor (tests/muzik-smoke.mjs). */
       muzik: { durum: () => muzik.durum(), ac: v => { muzik.ac(v); syncMenu(); }, perde: () => screens.perde },

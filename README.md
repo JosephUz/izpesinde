@@ -80,11 +80,15 @@ yumuşatma kapalı, piksel oranı 1, gölge haritası küçüktür. Kök, taray�
 4. Suçlular arkalarında 2 saniyelik izler bırakır: dedektif izini yalnızca dedektifler, savcı izini yalnızca savcılar
    görür; ikisi de suçlunun birkaç saniye önce tam bastığı noktaya, yürüyüş yönüne bakan bir çift ayak izi olarak düşer.
    Düşen izin üstünde zıplayan bir ok belirir. İz aralığı 5 → 4 → 3 → 2 sn, gecikme 5 → 4 → 3 → 2 → 1 sn kısalır.
-5. Dedektif şüpheliyi sol tıkla işaretler: sınırsız ama yanlışı −1, ve kasabada tek işaret olur (yeni işaret kendi ve
+5. Dedektif gördüğü herhangi birini (görüş alanındaki herkes, yaklaşmadan) sol tıkla işaretler: sınırsız ama yanlışı −1, ve kasabada tek işaret olur (yeni işaret kendi ve
    diğer dedektiflerin işaretlerini kaldırır); işareti ve yaklaşık bölgesini herkes görür. Savcı doğru kişiyi
-   sol tıkla yakalar: yakalama sınırsız ama yanlışı −1 ve her denemede savcının kimliği 10 sn suçlulara açılır.
+   sol tıkla yakalar (menzil ayağının altındaki altın halka): yakalama sınırsız ama yanlışı −1 ve her denemede savcının kimliği 10 sn suçlulara açılır.
    İşaretlenen suçlunun ekran kenarı kızarır; imleçteki birinin kılığına Q ile girerse (−1) işaret kalkar. Suçlu
-   imleçteki kişiyi sol tıkla öldürür (sınırsız).
+   imleçteki kişiyi sol tıkla öldürür (sınırsız; menzil ayağının altındaki kırmızı halka). İmleçteki kişi halkanın
+   içindeyse halka parlar.
+   Yakalanır ya da öldürülürsen kamera karakterine yaklaşır: kafes iner ya da yere yığılırsın, altta bir kart açılır;
+   sonra takım arkadaşını izlersin.
+   Sağ üstteki panel: suçlu (yakalanan ✓), savcı ve küçük dedektif kutucukları (ölen ✗; yalnızca sayı, kimlik değil).
 6. Tur biter: iki suçlu yakalanırsa kanun kazanır. Süre dolarsa ya da iki savcı da ölürse suçlular kazanır.
 
 ## Tuşlar

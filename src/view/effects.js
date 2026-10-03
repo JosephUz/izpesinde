@@ -1,18 +1,45 @@
 import * as T from 'three';
 import { CFG } from '../config.js';
 import { dist } from '../physics.js';
+import { active } from '../roster.js';
 
 /**
  * Yerdeki efektler: suçlu izleri (bastığı noktada, yürüyüş yönüne bakan bir çift ayak izi) ve olay halkaları (yakalama, kılık değişimi, cinayet). İkisi de havuzdan gelir:
  * her karede yeni geometri yaratmak yerine birim halkalar ölçeklenir, fazlası gizlenir.
  * İzler yalnızca kendi rolündeki göze (dedektif / savcı), onun görüş alanında görünür; ikisi de kan kırmızısı tondadır. İz
  * düşünce üstünde aşağıyı gösteren bir ok zıplar (kalabalıkta kıvılcım gözden kaçmasın), iz söndükçe o da söner.
+ * Menzil halkası: oyuncu savcıysa yakalama (catchRange), suçluysa öldürme (reach) menzili ayağının altında ince bir
+ * halkadır; imleçteki / seçili kişi menzildeyse parlar. Dedektifin menzili görüşün kendisidir, halkası yok.
+ * Elenme sahnesi (fate, bkz. main.js): yakalanan oyuncunun üstüne tepeden demir bir kafes sekerek iner; öldürülen
+ * oyuncuya çapraz kırmızı bir bıçak izi çakar ve altında kan göleti yayılır.
  */
+const REACH = { prosecutor: ['catchRange', '#f0a92e'], criminal: ['reach', '#e2483a'] };
 const TRACE_COLOR = { detective: ['#e2483a', '#b3261e'], prosecutor: ['#e2483a', '#b3261e'] };
 const FX_COLOR = { arrest: '#ffe4a1', disguise: '#b9e1de', murder: '#e9955a' };
 
 export function createEffectsView(scene, kit) {
   const traces = [], rings = [];
+  const reach = {};
+  // Kafes: çember üstünde demir çubuklar, üstte ve altta birer halka, tepede külah.
+  const cage = new T.Group(), iron = new T.MeshStandardMaterial({ color: '#3b3f3c', roughness: 0.55, metalness: 0.6 });
+  for (let i = 0; i < 12; i++) {
+    const r = i / 12 * Math.PI * 2, bar = new T.Mesh(kit.boxGeo, iron);
+    bar.scale.set(0.09, 2.7, 0.09); bar.position.set(Math.cos(r) * 0.95, 1.35, Math.sin(r) * 0.95); bar.castShadow = true; cage.add(bar);
+  }
+  for (const y of [0.06, 2.7]) {
+    const hoop = new T.Mesh(new T.TorusGeometry(0.95, 0.07, 6, 28), iron); hoop.rotation.x = Math.PI / 2; hoop.position.y = y; cage.add(hoop);
+  }
+  const cap = new T.Mesh(kit.coneGeo, iron); cap.scale.set(1.12, 0.55, 1.12); cap.position.y = 2.98; cage.add(cap);
+  cage.visible = false; scene.add(cage);
+  const pool = new T.Mesh(new T.CircleGeometry(1, 28), new T.MeshBasicMaterial({ color: '#7a1410', transparent: true, opacity: 0.85, depthWrite: false }));
+  pool.rotation.x = -Math.PI / 2; pool.renderOrder = 3; pool.visible = false; scene.add(pool);
+  const slash = new T.Mesh(kit.boxGeo, new T.MeshBasicMaterial({ color: '#ff3b2b', transparent: true, depthWrite: false }));
+  slash.visible = false; scene.add(slash);
+  for (const [role, [key, color]] of Object.entries(REACH)) {
+    const r = CFG[key], m = new T.Mesh(new T.RingGeometry(r - 0.13, r, 72), new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: true, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2; m.visible = false; m.renderOrder = 2; scene.add(m);
+    reach[role] = m;
+  }
   function traceView(i) {
     if (!traces[i]) {
       const g = new T.Group(); scene.add(g);
@@ -34,7 +61,38 @@ export function createEffectsView(scene, kit) {
   return {
     /** Bu karede kaç izin oku görünüyor (testler için). */
     arrowsShown: () => arrowsShown,
-    sync(world, eyes, playing, time = 0) {
+    /** Bu karede görünen menzil halkası: { role, radius } ya da null (testler için). */
+    /** Elenme sahnesi parçaları görünüyor mu (testler için). */
+    fateShown: () => ({ cage: cage.visible, pool: pool.visible }),
+    reachShown: () => { const e = Object.entries(reach).find(([, m]) => m.visible); return e ? { role: e[0], radius: CFG[REACH[e[0]][0]] } : null; },
+    sync(world, eyes, playing, time = 0, hover = null, fate = null) {
+      const victim = playing && fate ? world.actors[fate.id] : null;
+      cage.visible = Boolean(victim && fate.kind === 'caught');
+      if (cage.visible) {
+        // Tepeden düşer, iki kez seker.
+        const k = Math.min(1, fate.t / 0.7), h = k < 0.6 ? 1 - (k / 0.6) ** 2 : Math.abs(Math.sin((k - 0.6) / 0.4 * Math.PI * 2)) * 0.12 * (1 - k);
+        cage.position.set(victim.x, h * 8, victim.z);
+      }
+      pool.visible = Boolean(victim && fate.kind === 'murder');
+      if (pool.visible) {
+        // Göğüs hizası: gövde yerel -x yönüne yatar (bkz. characters.js), yönüyle döndürülür.
+        pool.position.set(victim.x - 0.9 * Math.cos(victim.facing), 0.12, victim.z + 0.9 * Math.sin(victim.facing));
+        pool.scale.setScalar(0.25 + 1.45 * (1 - (1 - Math.min(1, Math.max(0, fate.t - 0.6) / 2)) ** 2));
+      }
+      slash.visible = Boolean(pool.visible && fate.t < 0.55);
+      if (slash.visible) {
+        const k = fate.t / 0.55;
+        slash.position.set(victim.x, 1.3, victim.z); slash.rotation.set(0, Math.PI / 4, -0.7);
+        slash.scale.set(0.08, 3.2 * Math.min(1, k * 3), 0.08); slash.material.opacity = 1 - k;
+      }
+      const me = playing && eyes && world.player && eyes.id === world.player.id && active(eyes) ? eyes : null;
+      for (const [role, m] of Object.entries(reach)) {
+        m.visible = !!me && me.role === role;
+        if (!m.visible) continue;
+        const inside = hover && dist(hover, me) <= CFG[REACH[role][0]];
+        m.position.set(me.x, 0.12, me.z);
+        m.material.opacity = inside ? 0.95 : 0.42 + Math.sin(time * 3) * 0.08;
+      }
       const inSight = p => !eyes || dist(p, eyes) <= CFG.vision + 0.5;
       const shown = playing && eyes ? world.traces.filter(t => t.role === eyes.role && inSight(t)) : [];
       shown.forEach((t, i) => {

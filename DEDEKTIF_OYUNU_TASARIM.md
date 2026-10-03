@@ -72,7 +72,7 @@ Büyük bir ortaçağ kasabasında geçen; kalabalığa karışma, iz sürme, ta
 
 ## 6. İşaretleme (dedektif)
 
-- İşaret **sınırsızdır**. **Sol tık**, imlecin altındaki görüş alanındaki karakteri işaretler (menzil 12).
+- İşaret **sınırsızdır**. **Sol tık**, imlecin altındaki görüş alanındaki karakteri işaretler; menzil görüşün kendisidir (30), gördüğü herkesi yaklaşmadan işaretler.
 - Kasabada **aynı anda tek işaret** olur: her yeni işaret, işaretleyenin önceki işaretini ve **diğer bütün dedektiflerin işaretlerini** (aklanmış olanlar dahil) kaldırır. İşareti kalkan dedektife uyarı gider: *"İşaretin başka bir dedektifin yeni işaretiyle kaldırıldı. Takibe devam et."*
 - **İşaretleri herkes görür** (dedektifler, savcılar, suçlular). İşaretli suçlu ayrıca işaretli olduğu sürece ekran kenarının kızarmasıyla uyarılır.
 - Suçlu olmayan birini (NPC ya da başka yarışmacı) işaretlemek **her seferinde −1** puandır ve işaret yenisi gelene kadar kalır; savcıyı yanlış yönlendirmiş olur. Bu ceza tur sonunda yazılır, böylece işaretin doğru olup olmadığı tur içinde sızmaz.
@@ -88,7 +88,7 @@ Büyük bir ortaçağ kasabasında geçen; kalabalığa karışma, iz sürme, ta
 
 ## 8. Yakalama (savcı)
 
-- Yakalama **sınırsızdır**. **Sol tık**, imlecin altındaki yakın karakteri (menzil 4) yakalamaya çalışır.
+- Yakalama **sınırsızdır**. **Sol tık**, imlecin altındaki yakın karakteri (menzil 4) yakalamaya çalışır. Menzil, savcının ayağının altında ince altın bir halkadır; imleçteki kişi içindeyse parlar.
 - Suçluyu yakalamak: suçlu tur boyunca eylem yapamaz.
 - Yanlış kişiyi yakalamak: **−1** puan; hedefe bir şey olmaz.
 - **Her yakalama denemesi (doğru ya da yanlış) savcıyı ele verir:** kimliği **10 saniye** boyunca suçlulara görünür (başında kırmızı "SAVCI" etiketi, kırmızı ayak halkası, suçluların haritasında kırmızı nokta) ve hedef olur.
@@ -102,10 +102,11 @@ Büyük bir ortaçağ kasabasında geçen; kalabalığa karışma, iz sürme, ta
 
 ## 10. Cinayet
 
-- **İmleçteki kişi + sol tık** öldürür (menzil 2,8). Öldürme **sınırsızdır**; yanlışlıkla çift tıklamayı önlemek için iki öldürme arasında 1 sn bekleme vardır. Diğer suçlu hedeflenemez.
+- **İmleçteki kişi + sol tık** öldürür (menzil 2,8; suçlunun ayağının altında ince kırmızı halka, imleçteki kişi içindeyse parlar). Öldürme **sınırsızdır**; yanlışlıkla çift tıklamayı önlemek için iki öldürme arasında 1 sn bekleme vardır. Diğer suçlu hedeflenemez.
 - Kasabalı öldürmek **−1**, dedektif öldürmek **+1**, savcı öldürmek **+2**. (İstekteki "savcı dışı her öldürme −1" ile "dedektif +1" çeliştiği için dedektif +1 olarak uygulandı.)
 - İki savcı da ölürse suçlular kazanır.
 - Cinayet suçluları açığa çıkarmaz.
+- Sağ üstteki panelde suçlu kutucuklarının altında 2 savcı ve 6 (küçük) dedektif kutucuğu vardır; ölen ✗ olur. Kutucuklar yalnızca sayıyı söyler: önce yaşayanlar, sonra ölenler dizilir, kimin öldüğü sıradan anlaşılmaz (çevrim içinde sunucu da yalnızca sayıyı yollar).
 
 ## 11. Puanlar
 
@@ -140,6 +141,8 @@ Puanlar tur boyunca birikir, tur sonunda tek kez skora eklenir.
 | Esc | Duraklat (rol seçimi Esc ile kapanmaz). Çevrim içi odada oyun durmaz: menü açıkken yalnızca senin karakterin durur |
 
 ## 13. Ölüm, yakalanma, izleyici
+
+- **Elenme sahnesi:** Oyuncu yakalanır ya da öldürülürse kamera 3,4 sn kendi karakterine yaklaşır. Yakalananın üstüne tepeden demir bir kafes sekerek iner (yakalananlar ellerini kaldırır); öldürülen sendeleyip yere yığılır, çapraz kırmızı bir bıçak izi çakar, altında kan göleti yayılır. Ekran kenarı bir kez kararır / kızarır ve altta bir kart açılır (Yakalandın / Öldürüldün; parmaklık inen ya da bıçak izi çakan küçük bir çizim). Kart oyunu durdurmaz, 5,5 sn sonra ya da "İzlemeye geç" ile kapanır. Tur bu anda biterse tur sonu ekranı sahne bitene kadar bekler.
 
 - Yakalanan suçlu diğer suçluyu, ölen dedektif hayattaki dedektifleri, ölen savcı diğer savcıyı izler.
 - İzleyici kamera eylem hakkı ve gizli bilgi vermez. Yeni turda herkes yeniden başlar.

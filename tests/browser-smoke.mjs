@@ -84,10 +84,15 @@ try {
   });
   await clickOn(30);
   assert.equal(await game(() => window.__iz.world.marks.get(30)?.owner), 0, 'dedektif sol tıkla işaretler');
-  await game(() => window.__iz.setRole('prosecutor')); await clickOn(30);
+  assert.equal(await game(() => window.__iz.reachRing()), null, 'dedektifin menzil halkası yok (menzil görüş)');
+  await game(() => window.__iz.setRole('prosecutor')); await page.waitForTimeout(100);
+  assert.deepEqual(await game(() => window.__iz.reachRing()), { role: 'prosecutor', radius: 4 }, 'savcının yakalama halkası');
+  await page.screenshot({ path: 'artifacts/reach-prosecutor.png' });
+  await clickOn(30);
   assert.ok(await game(() => window.__iz.world.marks.get(30)?.cleared), 'savcı sol tıkla yakalar (yanlış kişi: aklanır)');
   // Suçlu: imleçteki kişinin kılığına Q ile girer.
-  await game(() => window.__iz.setRole('criminal'));
+  await game(() => window.__iz.setRole('criminal')); await page.waitForTimeout(100);
+  assert.deepEqual(await game(() => window.__iz.reachRing()), { role: 'criminal', radius: 2.8 }, 'suçlunun öldürme halkası');
   { const q = await game(() => { const a = window.__iz.world.actors[30]; return window.__iz.app.project(a.x, 1.1, a.z); }); await page.mouse.move(q.x, q.y); await page.waitForTimeout(150); }
   await page.keyboard.press('KeyQ'); await page.waitForTimeout(150);
   assert.ok(await game(() => window.__iz.world.player.appearance === window.__iz.world.actors[30].appearance), 'suçlu Q ile kılığa girer');
@@ -95,6 +100,21 @@ try {
   await page.waitForTimeout(250);
   assert.ok(await game(() => document.getElementById('alert').classList.contains('on')), 'işaretli suçlunun ekran kenarı kızarır');
   await page.screenshot({ path: 'artifacts/alert.png' });
+
+  // Kanun kutucukları: 2 savcı, 6 küçük dedektif kutucuğu; ölen ✗ olur (önce yaşayanlar).
+  assert.deepEqual(await game(() => [document.querySelectorAll('#pros span').length, document.querySelectorAll('#dets span').length]), [2, 6]);
+  const deadBefore = await game(() => ['#pros', '#dets'].map(s => document.querySelectorAll(s + ' .dead').length));
+  const fallen = await game(() => {
+    const w = window.__iz.world, c = w.actors.slice(0, 10), p = c.find(a => a.role === 'prosecutor' && a.alive && a !== w.player), d = c.find(a => a.role === 'detective' && a.alive && a !== w.player);
+    p.alive = false; d.alive = false; return [p.id, d.id];
+  });
+  await page.waitForTimeout(250);
+  const boxes = () => game(() => ['#pros', '#dets'].map(s => [...document.querySelectorAll(s + ' span')].map(e => e.textContent).join('')));
+  const [pb, db] = await boxes();
+  assert.match(pb + db, /^◇+✗*◇+✗*$/, 'önce yaşayanlar, sonra ölenler');
+  assert.deepEqual([pb.split('✗').length - 1, db.split('✗').length - 1], deadBefore.map(n => n + 1), 'ölen savcı / dedektif ✗');
+  await page.locator('#cluebar').screenshot({ path: 'artifacts/cluebar.png' });
+  await game(ids => { for (const id of ids) window.__iz.world.actors[id].alive = true; }, fallen);
 
   await game(() => { const w = window.__iz.world, p = w.player, c = w.crates[0]; p.x = c.x; p.z = c.z + 1; });
   await page.keyboard.press('KeyE'); await page.waitForTimeout(150);
@@ -140,6 +160,21 @@ try {
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ fps: Math.round(fps), render }));
 
+  // Öldürülme sahnesi: kart açılır, kamera oyuncuya yaklaşır, kan göleti yayılır; tur sonu sahne bitene kadar bekler.
+  await game(() => { window.__iz.setRole('detective'); const p = window.__iz.world.player; p.alive = false; });
+  await page.waitForTimeout(500);
+  assert.equal(await page.locator('#fate').isVisible(), true, 'öldürülünce kart açılır');
+  assert.equal(await page.locator('#fate h2').textContent(), 'Öldürüldün');
+  assert.equal(await game(() => window.__iz.fateParts().pool), true, 'kan göleti');
+  assert.equal(await page.locator('#spectator').isVisible(), false, 'sahne sürerken izleyici yazısı yok');
+  await page.waitForTimeout(900);
+  assert.ok(await game(() => window.__iz.app.zoom < 16), 'kamera oyuncuya yaklaşır');
+  await page.screenshot({ path: 'artifacts/fate-murder.png' });
+  await page.click('#fateClose');
+  await page.waitForTimeout(200);
+  assert.equal(await page.locator('#fate').isVisible(), false, 'İzlemeye geç kartı kapatır');
+  assert.equal(await page.locator('#spectator').isVisible(), true, 'sonra izleyici');
+
   // Her tur sonu → rol seçimi → tur girişi; beşinci turdan sonra yeni maç yine rol seçimiyle başlar.
   for (let round = 1; round <= 5; round++) {
     await game(() => window.__iz.finish());
@@ -153,8 +188,21 @@ try {
   assert.equal(await game(() => window.__iz.world.round), 1);
   assert.equal(await game(() => window.__iz.world.player.role), 'criminal');
   assert.equal(await game(() => window.__iz.world.history.length), 0);
+
+  // Yakalanma sahnesi: kafes iner, kart açılır.
+  await game(() => { const p = window.__iz.world.player; p.caught = true; });
+  await page.waitForTimeout(400);
+  assert.equal(await page.locator('#fate h2').textContent(), 'Yakalandın');
+  assert.equal(await game(() => window.__iz.fateParts().cage), true, 'kafes');
+  await page.waitForTimeout(1000);
+  await page.screenshot({ path: 'artifacts/fate-caught.png' });
+  await game(() => window.__iz.finish());
+  await page.waitForTimeout(500);
+  assert.equal(await page.locator('#next').count(), 0, 'tur sonu ekranı sahne bitene kadar bekler');
+  await page.waitForSelector('#next', { timeout: 5000 });
+  assert.equal(await page.locator('#fate').isVisible(), false);
   assert.deepEqual(errors, []);
-  console.log('Tarayıcı dumanı testi geçti: menü, rol seçimi, hareket, sis, sol tık eylemleri, kutu, saydamlık, iz oku, beş tur.');
+  console.log('Tarayıcı dumanı testi geçti: menü, rol seçimi, hareket, sis, sol tık eylemleri, kutu, saydamlık, iz oku, elenme sahneleri, beş tur.');
 } finally {
   await browser.close();
 }

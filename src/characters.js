@@ -11,7 +11,11 @@ import { active } from './roster.js';
  *
  * Ayak halkaları: tanıdığın kişiler yeşil, işaretliler altın (aklanmış işaret gri), suçlunun gözünde ele verilmiş
  * savcılar kırmızı. Ayrıca kendi halkan ve imlecin altındaki hedefin halkası (rol rengiyle).
+ *
+ * Yakalananlar ellerini kaldırır. Oyuncunun elenme sahnesinde (fate, bkz. main.js) öldürülen karakter bir anda değil,
+ * sendeleyip yere yığılarak düşer.
  */
+const ease = k => 1 - (1 - k) ** 3;
 const LIMIT = 400;
 
 export function createCharacterView(scene, kit) {
@@ -81,7 +85,7 @@ export function createCharacterView(scene, kit) {
       for (const a of world.actors) views.set(a.id, build(a));
     },
     /** eyes: kimin gözünden bakılıyor (oyuncu ya da izlenen takım arkadaşı); menüde null. */
-    sync(world, eyes, playing, time, hoverId, focus) {
+    sync(world, eyes, playing, time, hoverId, focus, fate = null) {
       const marks = new Map(playing && eyes ? marksFor(world, eyes).map(m => [m.target.id, m]) : []);
       const exposed = new Set(playing && eyes?.role === 'criminal' ? revealedProsecutors(world).map(a => a.id) : []);
       for (const a of world.actors) {
@@ -92,12 +96,16 @@ export function createCharacterView(scene, kit) {
         v.root.position.set(a.x, a.y, a.z); v.root.rotation.y = a.facing;
         v.cloth.color.set(PALETTE[a.appearance]);
         v.hat.visible = a.hat === 1; v.hood.visible = a.hat === 2; v.pack.visible = a.hat === 0 && !a.carry; v.cargo.visible = Boolean(a.carry);
-        v.body.rotation.z = !a.alive ? Math.PI / 2 : a.caught ? 0.23 : 0;
-        v.body.position.y = !a.alive ? -0.3 : Math.sin(time * 2 + a.id) * 0.025;
+        // Öldürülme sahnesi: önce geriye sendeler, sonra yan yatar (0,9 sn).
+        const fall = fate?.kind === 'murder' && fate.id === a.id ? Math.min(1, fate.t / 0.9) : 1;
+        const sway = fall < 0.3 ? Math.sin(fall / 0.3 * Math.PI) * 0.35 : 0;
+        v.body.rotation.z = !a.alive ? Math.PI / 2 * ease(Math.max(0, fall - 0.3) / 0.7) : a.caught ? 0.23 : 0;
+        v.body.rotation.x = !a.alive ? -sway : 0;
+        v.body.position.y = !a.alive ? -0.3 * ease(fall) : Math.sin(time * 2 + a.id) * 0.025;
         const walk = Math.sin(time * (a.speed > 6 ? 15 : 10) + a.id) * Math.min(0.7, a.speed * 0.13);
         v.limbs.forEach((l, i) => {
           // Kollar (tek sıra) kutu taşırken öne uzanır, çalışırken sallanır; bacaklar yürüyüşle.
-          l.rotation.x = a.carry && i % 2 ? -1.1 : a.action || a.wait > 0 ? (i % 2 ? Math.sin(time * 5) * 0.65 - 0.7 : 0) : walk * (i < 2 ? 1 : -1);
+          l.rotation.x = a.caught && i % 2 ? -2.7 + Math.sin(time * 4 + i) * 0.12 : a.carry && i % 2 ? -1.1 : a.action || a.wait > 0 ? (i % 2 ? Math.sin(time * 5) * 0.65 - 0.7 : 0) : walk * (i < 2 ? 1 : -1);
         });
         const mark = marks.get(a.id), known = eyes && eyes.known.has(a.id);
         const target = exposed.has(a.id);

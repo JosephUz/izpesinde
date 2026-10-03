@@ -41,6 +41,7 @@ export function stateFor(world, seat, eyes, since) {
     rev,
     crates: world.crates.map(c => [r2(c.x), r2(c.z), c.carrier ?? -1]),
     crim: criminals(world).map(c => (active(c) ? 1 : 0)),
+    law: ['prosecutor', 'detective'].map(r => contestants(world).filter(a => a.role === r && a.alive).length),
     ev: events.map(e => [e.id, e.text, e.kind, r2(e.time)]),
   };
 }

@@ -8,6 +8,8 @@ export const CFG = {
   rounds: 5, seconds: 360, crowd: 170, scale: 1.5, half: 102,
   walk: 5.3, run: 8.6, jump: 10, gravity: 23, dash: 22, dashTime: 0.23, dashCooldown: 2.8,
   reach: 2.8,
+  /** Karakter gövdesinin yarıçapı: yerdeyken kimse kimsenin içinden geçemez (zıplarken geçer). */
+  body: 0.42,
   /** Herkesin (insan ve bot) görüş yarıçapı: dışı kararır, oradaki karakterler çizilmez ve botlarca bilinmez. */
   vision: 30,
   /**

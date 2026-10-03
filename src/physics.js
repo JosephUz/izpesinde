@@ -14,6 +14,38 @@ export function blocked(env, x, z) {
     env.obstacles.some(b => Math.abs(x - b.x) < b.w / 2 && Math.abs(z - b.z) < b.d / 2);
 }
 
+/**
+ * Karakterler birbirinin içinden geçmez: yerdeki (zıplamayan) ve ölü olmayan her iki karakter CFG.body * 2'den yakınsa
+ * aradaki örtüşme ikisine yarı yarıya itilerek açılır; itme bir engele sokacaksa o eksende yapılmaz. Üst üste binen
+ * karakterler imleçle seçilemiyordu. 180 karakter için 2 birimlik ızgara: yalnızca komşu hücreler denetlenir.
+ */
+export function separate(world) {
+  const min = CFG.body * 2, cells = new Map(), key = (x, z) => x * 4096 + z;
+  const solid = world.actors.filter(a => a.alive && a.y < 0.4);
+  for (const a of solid) {
+    const k = key(Math.floor(a.x / 2), Math.floor(a.z / 2));
+    (cells.get(k) || cells.set(k, []).get(k)).push(a);
+  }
+  const push = (a, dx, dz) => {
+    if (!blocked(world.env, a.x + dx, a.z)) a.x += dx;
+    if (!blocked(world.env, a.x, a.z + dz)) a.z += dz;
+  };
+  for (const a of solid) {
+    const cx = Math.floor(a.x / 2), cz = Math.floor(a.z / 2);
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+      for (const b of cells.get(key(cx + i, cz + j)) || []) {
+        if (b.id <= a.id) continue;
+        let dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
+        if (d >= min) continue;
+        if (d < 1e-4) { const t = (a.id * 2.399) % (Math.PI * 2); dx = Math.cos(t); dz = Math.sin(t); d = 1; } else { dx /= d; dz /= d; }
+        const o = (min - Math.min(d, min)) / 2;
+        push(a, -dx * o, -dz * o); push(b, dx * o, dz * o);
+      }
+    }
+  }
+  for (const a of solid) if (a.crate !== null) Object.assign(world.crates[a.crate], { x: a.x, z: a.z });
+}
+
 /** (x, z) yakınındaki ilk boş nokta: inişte binanın içinde kalmamak ve doğru yere doğmak için. */
 export function safe(env, x, z) {
   x = Math.max(-CFG.half + 1, Math.min(CFG.half - 1, x));

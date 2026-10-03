@@ -4,7 +4,7 @@ import { disguise, murder } from './criminal.js';
 import { blend, carry, dash, fall, followPath, jump, move } from './crowd.js';
 import { REGIONS, computeEnvironment } from './environment.js';
 import { arrest, mark } from './marks.js';
-import { safe } from './physics.js';
+import { safe, separate } from './physics.js';
 import { rng } from './rng.js';
 import { active, contestants, emit } from './roster.js';
 import { finish } from './score.js';
@@ -111,6 +111,7 @@ export function step(world, dt, input = {}) {
   for (const a of world.actors) {
     if (a.action && active(a)) { a.action.elapsed += dt; if (a.action.elapsed >= a.action.duration) a.action = null; }
   }
+  separate(world);
   updateTraces(world, dt);
   for (const fx of world.effects) fx.t -= dt;
   world.effects = world.effects.filter(f => f.t > 0);

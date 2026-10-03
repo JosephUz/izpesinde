@@ -9,7 +9,7 @@ import { disguise, murder } from '../src/criminal.js';
 import { carry, dash, followPath, jump, move } from '../src/crowd.js';
 import { REGIONS } from '../src/environment.js';
 import { arrest, caughtNow, mark, marksFor } from '../src/marks.js';
-import { blocked, dist } from '../src/physics.js';
+import { blocked, dist, safe } from '../src/physics.js';
 import { contestants, emit } from '../src/roster.js';
 import { roundFor, stateFor } from '../src/net/visibility.js';
 import { finish } from '../src/score.js';
@@ -62,6 +62,7 @@ test('İz aralığı 5 → 4 → 3 → 2 sn, gecikme 5 → 4 → 3 → 2 → 1 s
 
 test('Her iz anında iki iz düşer: dedektif ve savcı türü, gecikme kadar önceki yere, 2 sn yaşar; suçlular kaydırılmıştır', () => {
   const w = setup(), [a, b] = role(w, 'criminal');
+  Object.assign(a, safe(w.env, -30, 40)); // yığının dışında: gövdeler birbirini itmesin
   for (let i = 0; i < 51; i++) { a.x += 0.04; step(w, 0.05); }
   assert.equal(w.traces.filter(t => t.by === a.id).length, 0, 'ilk suçlu ilk izini 5. saniyede bırakır');
   assert.deepEqual(w.traces.filter(t => t.by === b.id).map(t => t.role).sort(), ['detective', 'prosecutor'], 'ikinci suçlu yarım aralık önce');
@@ -268,4 +269,21 @@ test('Çevrim içi paket yalnızca bilinmesi gerekeni taşır: roller, izler, el
   emit(w, 'gizli', 'info', c.id); emit(w, 'herkese');
   assert.deepEqual(stateFor(w, d.id, d, 0).ev.map(e => e[1]).slice(-1), ['herkese']);
   assert.ok(stateFor(w, c.id, c, 0).ev.some(e => e[1] === 'gizli'));
+});
+
+test('Yerdeki karakterler birbirinin içinden geçmez; zıplayan geçer, ölü engel olmaz', () => {
+  const w = setup(), [a, b, c] = [w.actors[0], w.actors[40], w.actors[41]];
+  for (const x of w.actors) { x.x = 60 + (x.id % 20) * 3; x.z = -80 + Math.floor(x.id / 20) * 3; }
+  Object.assign(a, safe(w.env, -30, 40)); Object.assign(b, { x: a.x + 0.2, z: a.z }); Object.assign(c, { x: a.x, z: a.z });
+  for (let i = 0; i < 4; i++) step(w, 0.05);
+  assert.ok(dist(a, b) >= CFG.body * 2 - 0.01 && dist(a, c) >= CFG.body * 2 - 0.01 && dist(b, c) >= CFG.body * 2 - 0.01, 'üst üste binenler açılır');
+  // Oyuncu duran birine doğru yürür: içinden geçemez.
+  Object.assign(b, { x: a.x + 3, z: a.z }); Object.assign(c, { x: a.x - 5, z: a.z - 5 });
+  for (let i = 0; i < 30; i++) step(w, 0.05, { dx: 1, dz: 0 });
+  assert.ok(dist(a, b) >= CFG.body * 2 - 0.05, 'yürüyerek içine girilmez');
+  // Zıplarken üstünden geçer.
+  a.y = 2; Object.assign(a, { x: b.x, z: b.z }); a.vy = 5; step(w, 0.05);
+  assert.ok(dist(a, b) < 0.1, 'havadaki itilmez');
+  b.alive = false; Object.assign(c, { x: b.x, z: b.z }); step(w, 0.05);
+  assert.ok(dist(b, c) < 0.1, 'ölünün üstüne basılır');
 });

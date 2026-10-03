@@ -8,7 +8,7 @@ import { createInput } from './input.js';
 import { createMinimap } from './minimap.js';
 import { createNetClient } from './net/client.js';
 import { onlineEnabled } from './platform.js';
-import { dist } from './physics.js';
+import { dist, separate } from './physics.js';
 import { createScreens } from './screens.js';
 import { createUI } from './ui.js';
 import { createEffectsView } from './view/effects.js';
@@ -196,6 +196,7 @@ export async function start(root) {
       if (a.think <= 0) { a.think = 1.5; if (!a.path.length) routine(world, a); }
       followPath(world, a, dt * 0.6);
     }
+    separate(world);
   }
 
   let last = performance.now(), uiClock = 0;

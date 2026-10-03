@@ -56,6 +56,21 @@ try {
   assert.equal(await game(() => window.__iz.world.time), time, 'duraklatınca zaman durur');
   await page.click('#resume');
 
+  // Fare tekerleği yaklaştırır / uzaklaştırır (sınırlar içinde), tercih saklanır.
+  {
+    const z0 = await game(() => window.__iz.app.zoomPlay);
+    await page.mouse.move(640, 400);
+    for (let i = 0; i < 3; i++) { await page.mouse.wheel(0, -120); await page.waitForTimeout(30); }
+    const zin = await game(() => window.__iz.app.zoomPlay);
+    assert.ok(zin < z0 - 3, `tekerlek yaklaştırır (${z0} → ${zin.toFixed(1)})`);
+    for (let i = 0; i < 40; i++) await page.mouse.wheel(0, 120);
+    await page.waitForTimeout(100);
+    assert.equal(await game(() => window.__iz.app.zoomPlay), 34, 'uzaklaştırma sınırı');
+    assert.equal(await game(() => localStorage.getItem('iz.zoom')), '34.00');
+    await game(z => { window.__iz.app.zoomPlay = z; }, z0);
+    await page.waitForTimeout(800);
+  }
+
   // Botları dondur, bir kasabalıyı oyuncunun yanına koy ve dünyada üstüne tıkla.
   const clickOn = async id => {
     await page.waitForTimeout(250);

@@ -64,7 +64,8 @@ sırasında "Telefonu yan çevir" uyarısı). Sol yarıda **joystick** (sonuna k
 seçer** (halka çıkar; görüş alanından çıkana ya da başkası seçilene kadar kalır) ama eylem yapmaz: yanlış dokunuş
 −1'e mal olmasın diye eylem düğmeyle yapılır. Sağ altta büyük düğme rolün eylemi (İŞARETLE / YAKALA / ÖLDÜR, seçili
 hedefe), KILIK (yalnızca suçluda), KUTU, ÇALIŞ, ZIPLA, ATIL; sağ üstte HARİTA, SKOR (basılı tut; elenince izlenen kişiyi
-değiştirir) ve ☰ menü. HUD sıkışık düzene geçer. Oyuna girerken tam ekran ve yatay kilit istenir. Telefonda kenar
+değiştirir) ve ☰ menü. **İki parmakla** yaklaştırılır / uzaklaştırılır (kıpırdamamış joystick parmağı da ikinci
+parmakla birlikte yakınlaştırmaya döner; yürürken başlamaz). HUD sıkışık düzene geçer. Oyuna girerken tam ekran ve yatay kilit istenir. Telefonda kenar
 yumuşatma kapalı, piksel oranı 1, gölge haritası küçüktür. Kök, tarayıcı çubuklarının bıraktığı görünür alana kilitlenir
 (`src/gorunur-alan.js`, Çayır Muhafızı ile aynı dosya). Kod: `src/touch.js`, `src/input.js`. Test: `tests/touch-smoke.mjs`.
 
@@ -99,6 +100,7 @@ yumuşatma kapalı, piksel oranı 1, gölge haritası küçüktür. Kök, taray�
 | F | İş noktasında çalış |
 | Q | Suçlu: imleçteki kişinin kılığına gir (−1) |
 | M | Küçük haritayı büyüt / küçült |
+| Fare tekerleği | Yaklaştır / uzaklaştır (tercih saklanır) |
 | Tab | Basılı: skor; elenince: izlenen takım arkadaşını değiştir |
 | Esc | Duraklat / devam (çevrim içi odada oyun durmaz) |
 

@@ -96,6 +96,19 @@ export async function start(root) {
   };
   const screens = createScreens(root, app, hooks);
   const ui = createUI(root, app, hooks), minimap = createMinimap($('#minimap'), $('#mapcard'), app, $('#regionName'));
+  // Oyunda yaklaştırma: fare tekerleği (masaüstü), iki parmak (dokunmatik). Küçük ekranda seçimi kolaylaştırır; tercih saklanır.
+  let pinchFrom = CAMERA.zoomPlay;
+  try { app.zoomPlay = Math.min(CAMERA.zoomMax, Math.max(CAMERA.zoomMin, Number(localStorage.getItem('iz.zoom')) || CAMERA.zoomPlay)); } catch { app.zoomPlay = CAMERA.zoomPlay; }
+  function setZoom(z, now = false) {
+    app.zoomPlay = Math.min(CAMERA.zoomMax, Math.max(CAMERA.zoomMin, z));
+    if (now && app.playing) app.zoom = app.zoomPlay;
+    try { localStorage.setItem('iz.zoom', app.zoomPlay.toFixed(2)); } catch { /* yok */ }
+  }
+  root.addEventListener('wheel', e => {
+    if (!app.playing || app.paused || !$('#overlay').hidden || e.target.closest('#overlay, #scores')) return;
+    e.preventDefault();
+    setZoom(app.zoomPlay * Math.exp(Math.max(-120, Math.min(120, e.deltaY)) * 0.0015));
+  }, { passive: false });
   const input = createInput(canvas, app, {
     busy: () => !app.playing || app.paused || !$('#scores').hidden,
     escape() {
@@ -109,6 +122,7 @@ export async function start(root) {
     blur() { if (app.playing && !app.online && !app.paused && !app.world.result) screens.pauseMenu(); },
     use() { if (app.playing && !app.paused) ui.toast(touch ? 'Önce dünyada birine dokunarak seç.' : 'İmlecin altında kimse yok.'); },
     map() { if (app.playing) minimap.toggle(); },
+    pinch(scale, start) { if (start) pinchFrom = app.zoomPlay; else setZoom(pinchFrom / scale, true); },
     sound: type => ui.tone(type === 'use' ? 520 : 330, 0.08),
   }, touch ? root : null);
 
@@ -244,7 +258,7 @@ export async function start(root) {
       // Kamera: oyunda izlenen karaktere yakın, menüde kasabanın üstünde geniş.
       if (eyes) focus.lerp(new T.Vector3(eyes.x, 0, eyes.z), 1 - Math.exp(-CAMERA.follow * dt));
       else if (!app.playing) focus.lerp(new T.Vector3(-7, 0, 1), 0.02);
-      app.zoom += ((app.playing ? CAMERA.zoomPlay : CAMERA.zoomMenu) - app.zoom) * Math.min(1, dt * (app.playing ? 3 : 2));
+      app.zoom += ((app.playing ? app.zoomPlay : CAMERA.zoomMenu) - app.zoom) * Math.min(1, dt * (app.playing ? 3 : 2));
       const aspect = app.w / app.h;
       Object.assign(camera, { left: -app.zoom * aspect, right: app.zoom * aspect, top: app.zoom, bottom: -app.zoom });
       camera.updateProjectionMatrix();

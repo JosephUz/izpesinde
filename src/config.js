@@ -50,9 +50,10 @@ export const LEVELS = {
 
 /**
  * İzometrik kamera: odak noktasından sabit kaymayla bakar (görüş sisi de bu kaymadan odağı geri bulur, bkz. fog.js).
- * zoom ortografik yarı yükseklik: oyunda yakın, menüde kasabanın tamamına yakın.
+ * zoom ortografik yarı yükseklik: oyunda yakın, menüde kasabanın tamamına yakın. Oyunda fare tekerleği / iki parmakla
+ * zoomMin-zoomMax arasında yaklaştırılır (tercih localStorage iz.zoom).
  */
-export const CAMERA = { offset: [35, 46, 38], zoomPlay: 26, zoomMenu: 30, follow: 7 };
+export const CAMERA = { offset: [35, 46, 38], zoomPlay: 26, zoomMenu: 30, zoomMin: 10, zoomMax: 34, follow: 7 };
 
 /**
  * Sabit nesne saydamlığı: arkasına biri geçen nesnenin piksellerinin `keep` kadarı çizilir; geçiş hızı `speed`,

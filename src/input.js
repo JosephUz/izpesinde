@@ -99,6 +99,7 @@ export function createInput(canvas, app, hooks, touchRoot = null) {
         command(id);
       },
       up(id) { if (id === 'score') hooks.tab(false); },
+      pinch: (scale, start) => hooks.pinch?.(scale, start),
     });
   }
 

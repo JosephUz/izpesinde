@@ -135,6 +135,7 @@ Puanlar tur boyunca birikir, tur sonunda tek kez skora eklenir.
 | F | İş noktasında çalış |
 | Q | Suçlu: imleçteki kişinin kılığına gir (−1) |
 | M | Küçük haritayı büyüt / küçült |
+| Fare tekerleği | Yaklaştır / uzaklaştır (telefonda iki parmak) |
 | Tab | Skor tablosu / izleyicide hedef değiştir |
 | Esc | Duraklat (rol seçimi Esc ile kapanmaz). Çevrim içi odada oyun durmaz: menü açıkken yalnızca senin karakterin durur |
 

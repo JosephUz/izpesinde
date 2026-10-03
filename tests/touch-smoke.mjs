@@ -52,6 +52,30 @@ try {
   assert.ok(moved > 1.5, `joystick yürütür (${moved.toFixed(2)}, başlangıç ${p0.x.toFixed(1)})`);
   await page.screenshot({ path: 'artifacts/touch-play.png' });
 
+  // İki parmak: açınca yaklaştırır, kapatınca uzaklaştırır; yakınlaştırma sırasında karakter yürümez.
+  {
+    const z0 = await game(() => window.__iz.app.zoomPlay), at = await game(() => ({ x: window.__iz.world.player.x, z: window.__iz.world.player.z }));
+    const pinch = async (from, to) => {
+      await touchAt('pointerdown', 300 - from, 200, 11); await touchAt('pointerdown', 300 + from, 200, 12);
+      for (let i = 1; i <= 5; i++) {
+        const g = from + (to - from) * i / 5;
+        await touchAt('pointermove', 300 - g, 200, 11); await touchAt('pointermove', 300 + g, 200, 12); await page.waitForTimeout(20);
+      }
+      await touchAt('pointerup', 300 - to, 200, 11); await touchAt('pointerup', 300 + to, 200, 12);
+      await page.waitForTimeout(100);
+      return game(() => window.__iz.app.zoomPlay);
+    };
+    const zin = await pinch(40, 100);
+    assert.ok(Math.abs(zin - z0 / 2.5) < 0.5 || zin === 10, `açmak yaklaştırır (${z0} → ${zin.toFixed(1)})`);
+    const zout = await pinch(100, 50);
+    assert.ok(Math.abs(zout - zin * 2) < 0.5, `kapatmak uzaklaştırır (${zin.toFixed(1)} → ${zout.toFixed(1)})`);
+    const end = await game(() => ({ x: window.__iz.world.player.x, z: window.__iz.world.player.z }));
+    assert.ok(Math.hypot(end.x - at.x, end.z - at.z) < 0.3, 'yakınlaştırma joystick sayılmaz');
+    assert.equal(await game(() => window.__iz.app.target), null, 'yakınlaştırma hedef seçmez');
+    await game(z => { window.__iz.app.zoomPlay = z; window.__iz.app.zoom = z; }, z0);
+    await page.waitForTimeout(300);
+  }
+
   // Dokunarak hedef seç: eylem yapmaz; büyük düğme seçili hedefi işaretler.
   await game(() => { const w = window.__iz.world, p = w.player, n = w.actors[30]; n.x = p.x + 3; n.z = p.z + 1; n.think = 9999; n.path = []; n.y = 0; });
   await page.waitForTimeout(200);
@@ -63,7 +87,8 @@ try {
   const use = await button('use');
   await tap(use.x, use.y);
   await page.waitForTimeout(150);
-  assert.equal(await game(() => window.__iz.world.marks.get(30)?.owner), 0, 'büyük düğme seçili hedefi işaretler');
+  // Bot dedektif hemen ardından işaretlerse bizimki kalkar (kasabada tek işaret): oyuncunun işaret olayına bakılır.
+  assert.ok(await game(() => window.__iz.world.marks.get(30)?.owner === 0 || window.__iz.world.events.some(e => e.to === 0 && e.text.startsWith('İşaret bırakıldı'))), 'büyük düğme seçili hedefi işaretler');
 
   // Rol değişince düğme adı ve Kılık.
   await game(() => window.__iz.setRole('criminal'));

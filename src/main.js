@@ -227,13 +227,6 @@ export async function start(root) {
       if (!b) continue;
       b.textContent = yazi; b.classList.toggle('muted', !acik);
     }
-    const sur = $('#muzikSes'), yuzde = $('#muzikYuzde'), satir = $('#muzikRow');
-    if (sur) {
-      const v = String(Math.round(muzik.ses * 100));
-      if (sur.value !== v) sur.value = v;
-      yuzde.textContent = v + '%';
-      satir.classList.toggle('off', !muzik.acik);
-    }
   }
   hooks.soundLabel = soundLabel;
   hooks.muzikLabel = muzikLabel;
@@ -246,7 +239,6 @@ export async function start(root) {
     return soundLabel();
   };
   hooks.toggleMuzik = () => { muzik.ac(); syncMenu(); return muzikLabel(); };
-  hooks.setMuzikSes = v => { muzik.sesAyarla(v); syncMenu(); };
   $('#muzik').hidden = muzik.kapali;
   syncMenu();
 

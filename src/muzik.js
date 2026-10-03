@@ -9,9 +9,8 @@
  * Çalma `<audio>` öğeleriyledir (Web Audio gerekmez): dosya akarak iner, sahne değişince ses düzeyi karşılıklı
  * süzülür. Dosyalar **gerektiğinde** yüklenir: menüde yalnız sakin parça iner, tur parçası tur başlarken.
  *
- * Ses düzeyi efektlerin (ui.js tone) altındadır: varsayılan %35. Açık / kapalı ve düzey tarayıcıda saklanır
- * (`iz.muzik`, `iz.muzik.ses`); açma / kapama düğmesi hem üst çubukta hem Esc menüsündedir (bkz. main.js setMuzik),
- * ses düzeyi sürgüsü Esc menüsündedir. Efekt sesi düğmesi (`iz.sound`) müziği etkilemez: ikisi bağımsızdır.
+ * Ses düzeyi efektlerin (ui.js tone) altında, sabit %35 (menüde sürgü yok; oyuncu cihazın sesinden ayarlar).
+ * Açık / kapalı tarayıcıda saklanır (`iz.muzik`); düğme hem üst çubukta hem Esc menüsündedir (bkz. main.js setMuzik). Efekt sesi düğmesi (`iz.sound`) müziği etkilemez: ikisi bağımsızdır.
  *
  * Tarayıcının otomatik oynatma kuralı: ilk kullanıcı dokunuşuna / tuşuna kadar hiç `play()` çağrılmaz, engellenirse
  * sonraki dokunuşta yeniden denenir. Sekme gizlenince durur, dönünce kaldığı yerden sürer.
@@ -65,7 +64,9 @@ export function createMuzik(root) {
   const kapali = muzikKapali();
   let acik = true, ses = VARSAYILAN_SES;
   try { acik = localStorage.getItem('iz.muzik') !== 'off'; } catch { /* yok */ }
-  try { const v = Number(localStorage.getItem('iz.muzik.ses')); if (Number.isFinite(v) && v > 0 && v <= 1) ses = v; } catch { /* yok */ }
+  // Müzik düzeyi sabit (VARSAYILAN_SES): menüde ses sürgüsü yok, oyuncu bilgisayarın / telefonun sesinden ayarlar.
+  // Yusuf 4 Ekim: "menülerde müzik sesi olmasın, pc sesinden ayarlasınlar, standart bir ses yüksekliği belirle".
+  // Eski sürümden kalmış saklı düzey (`<oyun>.muzik.ses`) okunmaz.
   const sakla = (k, v) => { try { localStorage.setItem(k, v); } catch { /* yok */ } };
 
   const parcalar = new Map();

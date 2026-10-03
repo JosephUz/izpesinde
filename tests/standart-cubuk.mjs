@@ -1,6 +1,6 @@
 // STANDART üst araç çubuğu ve duraklatma (Esc) menüsü — bütün JosephUz oyunlarında aynı olmalı:
 //   çubuk: `← josephuz.com` · `Ses: açık/kapalı` · `Müzik: açık/kapalı` · `Kontroller F1`
-//   menü:  `DEVAM ET →` · `Kontroller F1` · `Ses: …` · `Müzik: …` (+ ses sürgüsü) · `Ana menü` · `josephuz.com'a dön`
+//   menü:  `DEVAM ET →` · `Kontroller F1` · `Ses: …` · `Müzik: …` · `Ana menü` · `josephuz.com'a dön`
 // Sıranın ve yazıların doğruluğunu tests/muzik.test.mjs denetler; buradaki ölçü **yerleşim**: masaüstünde,
 // dar yatay telefonda (667x375), geniş yatay telefonda (844x390) ve dikeyde (390x844) çubuk tek satırda kalıyor,
 // ekrandan taşmıyor ve oyun adının üstüne binmiyor mu; Esc menüsünün son düğmesi kaydırmadan görünüyor mu.
@@ -71,7 +71,7 @@ try {
   }
 
   // 2) Standart Esc menüsü dar yatay telefonda bütünüyle görünmeli: en alttaki "josephuz.com'a dön" kaydırmasız
-  //    okunsun (menü bu görevde Müzik düğmesi ve ses sürgüsüyle uzadı) ve pencere düğme sütunu kadar dar kalsın.
+  //    okunsun (menü bu görevde Müzik düğmesiyle uzadı) ve pencere düğme sütunu kadar dar kalsın.
   const [, DAR] = EKRANLAR[1];
   const context = await browser.newContext({ viewport: DAR, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   const page = await context.newPage(), hatalar = [];
@@ -100,7 +100,7 @@ try {
   await page.screenshot({ path: 'artifacts/standart-cubuk-dar-duraklatma.png' });
   console.log(JSON.stringify({ kart, son, dugmeler }));
 
-  assert.deepEqual(dugmeler, ['resume', 'pauseHelp', 'pauseSound', 'pauseMuzik', 'muzikRow', 'quit', "josephuz.com'a dön"],
+  assert.deepEqual(dugmeler, ['resume', 'pauseHelp', 'pauseSound', 'pauseMuzik', 'quit', "josephuz.com'a dön"],
     'Esc menüsünün sırası standart olmalı');
   assert.ok(son.bottom <= DAR.height, `Esc menüsünün son düğmesi ekrandan taşıyor (${son.bottom} > ${DAR.height})`);
   assert.ok(kart.bottom <= DAR.height && kart.top >= 0, 'Esc penceresi ekrandan taşıyor');
@@ -117,7 +117,7 @@ try {
   await mPage.waitForSelector('#beginRound'); await mPage.click('#beginRound');
   await mPage.waitForFunction(() => window.__iz.app.playing && document.querySelector('#overlay').hidden, null, { timeout: 15000 });
   await mPage.keyboard.press('Escape');
-  await mPage.waitForSelector('#muzikSes');
+  await mPage.waitForSelector('#pauseMuzik');
   await mPage.waitForTimeout(300);
   await mPage.screenshot({ path: 'artifacts/standart-cubuk-masaustu-duraklatma.png' });
   const mKart = await mPage.evaluate(`(${OLC})('#overlay .dialog')`);

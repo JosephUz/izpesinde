@@ -71,16 +71,17 @@ test('ses ve müzik yazıları standart (iki nokta, küçük harf durum) ve iki 
   }
 });
 
-test('STANDART Esc menüsü: sıra DEVAM ET → · Kontroller F1 · Ses · Müzik (+sürgü) · Ana menü · josephuz.com', () => {
+test('STANDART Esc menüsü: sıra DEVAM ET → · Kontroller F1 · Ses · Müzik · Ana menü · josephuz.com', () => {
   const screens = oku('src/screens.js');
   const stack = screens.match(/<div class="menu-stack">([\s\S]*?)<\/div>`, 'mola'\)/)?.[1];
   assert.ok(stack, 'Esc menüsü .menu-stack ile kurulmalı');
-  // Müzik düğmesi ve sürgüsü ayrı bir parçadan (`${muzik}`) gelir: gösteri / test kipinde hiç eklenmez.
+  // Müzik düğmesi ayrı bir parçadan (`${muzik}`) gelir: gösteri / test kipinde hiç eklenmez.
   const muzikParca = screens.match(/\? `(<button class="secondary" id="pauseMuzik">[\s\S]*?)`\s*\n/)?.[1];
-  assert.ok(muzikParca, 'müzik düğmesi + ses sürgüsü ayrı bir parça olmalı');
+  assert.ok(muzikParca, 'müzik düğmesi ayrı bir parça olmalı');
   const sira = [...stack.replace('${muzik}', muzikParca).matchAll(/id="([^"]+)"/g)].map(m => m[1]);
-  assert.deepEqual(sira, ['resume', 'pauseHelp', 'pauseSound', 'pauseMuzik', 'muzikRow', 'muzikSes', 'muzikYuzde', 'quit'],
+  assert.deepEqual(sira, ['resume', 'pauseHelp', 'pauseSound', 'pauseMuzik', 'quit'],
     'Esc menüsünün standart sırası');
+  assert.ok(!screens.includes('type="range"'), 'Esc menüsünde müzik sesi sürgüsü olmamalı (ses düzeyi sabit)');
   assert.ok(stack.includes('DEVAM ET →'), 'ilk düğme "DEVAM ET →"');
   assert.ok(stack.includes('Kontroller <kbd>F1</kbd>'), 'ikinci düğme "Kontroller F1"');
   assert.ok(stack.includes("josephuz.com'a dön"), 'son satır josephuz.com bağlantısı');
@@ -90,7 +91,7 @@ test('ses ve müzik tarayıcıda ayrı anahtarlarda saklanır, varsayılan müzi
   const main = oku('src/main.js'), muzik = oku('src/muzik.js');
   assert.ok(main.includes("localStorage.setItem('iz.sound'"), 'efekt sesi iz.sound anahtarında saklanmalı');
   assert.ok(muzik.includes("sakla('iz.muzik'"), 'müzik iz.muzik anahtarında saklanmalı');
-  assert.ok(muzik.includes("sakla('iz.muzik.ses'"), 'müzik sesi iz.muzik.ses anahtarında saklanmalı');
+  assert.ok(!muzik.includes("getItem('iz.muzik.ses')"), 'müzik sesi sabit: saklı düzey okunmamalı');
   // Varsayılan açık: yalnızca 'off' yazılıysa kapalı.
   assert.ok(muzik.includes("localStorage.getItem('iz.muzik') !== 'off'"), 'müzik varsayılan olarak açık olmalı');
 });

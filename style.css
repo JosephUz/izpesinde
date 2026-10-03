@@ -48,11 +48,6 @@ a.secondary,a.secondary:visited{color:var(--paper)}#toptools a.icon,#toptools a.
 @media (max-width:760px){.home-meta{flex-wrap:wrap;gap:6px 16px}}
 /* Kapalı durum: ses ve müzik düğmeleri hem çubukta hem Esc menüsünde aynı biçimde soluklaşır. */
 .icon.muted,.menu-stack .muted{opacity:.62}
-/* Esc menüsündeki müzik sesi sürgüsü: Müzik düğmesinin hemen altında, düğme sütunu genişliğinde. */
-.menu-stack .muzik-row{font-size:11px;gap:10px;cursor:pointer}
-.menu-stack .muzik-row.off{opacity:.45}
-.menu-stack .muzik-row input[type=range]{flex:1;min-width:0;accent-color:var(--gold);height:3px}
-.menu-stack .muzik-row b{font:11px Segoe UI,sans-serif;color:var(--gold);min-width:34px;text-align:right}
 /* STANDART üst araç çubuğu dar pencerede de dört düğmeyle tek satırda kalır: önce yazılar kısalır (alan adı düşer). */
 @media (max-width:760px){#toptools{gap:6px}#toptools .icon{padding:8px 11px}#toptools #homeLink .site-name{display:none}}
 /* Telefonda (dikey ve yatay) dört düğme simgeye iner: sıra ve düğmeler aynı kalır, çubuk ekrandan taşmaz ve oyun
@@ -70,7 +65,7 @@ a.secondary,a.secondary:visited{color:var(--paper)}#toptools a.icon,#toptools a.
 #muzik.muted::before{text-decoration:line-through;opacity:.65}
 #helpBtn::before{content:"?";font-weight:900}
 }
-/* Standart Esc menüsü Müzik düğmesi ve ses sürgüsüyle yedi satıra çıktı: dar yatay telefonda (667x375) kaydırmadan
+/* Standart Esc menüsü Müzik düğmesiyle altı satıra çıktı: dar yatay telefonda (667x375) kaydırmadan
    sığsın diye başlık kısalır, düğmeler sıkışır. Son satır ("josephuz.com'a dön") ekranın içinde kalmalı. */
 @media (max-height:560px){
 .dialog:has(> .menu-stack){padding:12px 18px}

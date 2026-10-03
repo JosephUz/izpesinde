@@ -100,7 +100,7 @@ export function createScreens(root, app, hooks) {
 
   /**
    * STANDART duraklatma (Esc) menüsü — bütün JosephUz oyunlarında aynı sıra, aynı yazılar:
-   * `DEVAM ET →` · `Kontroller F1` · `Ses: …` · `Müzik: …` (altında müzik sesi sürgüsü) · `Ana menü`
+   * `DEVAM ET →` · `Kontroller F1` · `Ses: …` · `Müzik: …` · `Ana menü`
    * (çevrim içinde `Odadan çık`) · `josephuz.com'a dön`. Alt alta, pencere düğme sütunu kadar dar.
    * Ses ve müzik düğmeleri üst çubuktakilerle **aynı durumu** gösterir (main.js setSound / setMuzik).
    */
@@ -110,17 +110,15 @@ export function createScreens(root, app, hooks) {
     const head = app.online
       ? '<span class="eyebrow">ÇEVRİM İÇİ ODA</span><h2>Kasaba durmuyor.</h2><p>Bu ekran açıkken karakterin yerinde durur. Odadan çıkarsan karakterini tur sonuna kadar bir bot yönetir.</p>'
       : '<span class="eyebrow">ZAMAN SENİ BEKLİYOR</span><h2>Bir nefes arası.</h2><p>Kasaba duraklatıldı.</p>';
-    // Gösteri / otomatik tarayıcı kipinde müzik hiç kurulmaz (muzik.js muzikKapali): düğme ve sürgü menüye girmez.
+    // Gösteri / otomatik tarayıcı kipinde müzik hiç kurulmaz (muzik.js muzikKapali): düğme menüye girmez.
     const muzik = hooks.muzikVar()
-      ? `<button class="secondary" id="pauseMuzik">${hooks.muzikLabel()}</button><label class="secondary muzik-row" id="muzikRow">Müzik sesi <input type="range" id="muzikSes" min="0" max="100" step="5" aria-label="Müzik ses düzeyi"><b id="muzikYuzde"></b></label>`
+      ? `<button class="secondary" id="pauseMuzik">${hooks.muzikLabel()}</button>`
       : '';
     show(`${head}<div class="menu-stack"><button class="primary" id="resume">DEVAM ET →</button><button class="secondary" id="pauseHelp">Kontroller <kbd>F1</kbd></button><button class="secondary" id="pauseSound">${hooks.soundLabel()}</button>${muzik}<button class="secondary" id="quit">${app.online ? 'Odadan çık' : 'Ana menü'}</button><a class="secondary" href="https://www.josephuz.com/">josephuz.com'a dön</a></div>`, 'mola');
     $('#pauseSound').onclick = () => hooks.toggleSound();
     if (hooks.muzikVar()) {
       $('#pauseMuzik').onclick = () => hooks.toggleMuzik();
-      $('#muzikSes').oninput = () => hooks.setMuzikSes(Number($('#muzikSes').value) / 100);
-      $('#muzikSes').onkeydown = e => e.stopPropagation(); // ok tuşları sürgüyü sürsün, karakteri değil
-      hooks.syncMenu(); // yazılar ve sürgü üst çubuktakiyle aynı durumu göstersin
+      hooks.syncMenu(); // yazılar üst çubuktakiyle aynı durumu göstersin
     }
     $('#resume').onclick = close;
     $('#pauseHelp').onclick = () => help();

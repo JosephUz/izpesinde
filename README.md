@@ -57,6 +57,17 @@ hazır bir adla gelir), tek sırada **Tek başına**, **Oda kur**, **Odaya katı
 ve 01 / 02 / 03 kural kartları. **Hazırlık**: Tek başına ve Oda kur önce botların zorluğunu sorar (hatırlanır). **Esc
 menüsü**: alt alta Devam, Kontroller, Ses, Ana menü / Odadan çık ve josephuz.com'a dön. **F1** her ekranda kontrolleri açar.
 
+## Telefon ve tablet
+
+Çayır Muhafızı düzeni. Dokunmatik ekran algılanınca (masaüstünde `?touch`) açılır, ekran yataydır (dikeyde oyun
+sırasında "Telefonu yan çevir" uyarısı). Sol yarıda **joystick** (sonuna kadar itmek koşu). **Dünyaya dokunmak hedef
+seçer** (halka çıkar; görüş alanından çıkana ya da başkası seçilene kadar kalır) ama eylem yapmaz: yanlış dokunuş
+−1'e mal olmasın diye eylem düğmeyle yapılır. Sağ altta büyük düğme rolün eylemi (İŞARETLE / YAKALA / ÖLDÜR, seçili
+hedefe), KILIK (yalnızca suçluda), KUTU, ÇALIŞ, ZIPLA, ATIL; sağ üstte HARİTA, SKOR (basılı tut; elenince izlenen kişiyi
+değiştirir) ve ☰ menü. HUD sıkışık düzene geçer. Oyuna girerken tam ekran ve yatay kilit istenir. Telefonda kenar
+yumuşatma kapalı, piksel oranı 1, gölge haritası küçüktür. Kök, tarayıcı çubuklarının bıraktığı görünür alana kilitlenir
+(`src/gorunur-alan.js`, Çayır Muhafızı ile aynı dosya). Kod: `src/touch.js`, `src/input.js`. Test: `tests/touch-smoke.mjs`.
+
 ## Bir tur
 
 1. **Rol seçimi** (tek başına): üç karttan birini seç. Botlar kalan rolleri paylaşır; her tur 2 suçlu, 6 dedektif,
@@ -68,12 +79,12 @@ menüsü**: alt alta Devam, Kontroller, Ses, Ana menü / Odadan çık ve josephu
 4. Suçlular arkalarında 2 saniyelik izler bırakır: dedektif izini yalnızca dedektifler, savcı izini yalnızca savcılar
    görür; ikisi de suçlunun birkaç saniye önce tam bastığı noktaya, yürüyüş yönüne bakan bir çift ayak izi olarak düşer.
    Düşen izin üstünde zıplayan bir ok belirir. İz aralığı 5 → 4 → 3 → 2 sn, gecikme 5 → 4 → 3 → 2 → 1 sn kısalır.
-5. Dedektif şüpheliyi sol tıkla işaretler (3 hak); işareti ve yaklaşık bölgesini herkes görür. Savcı doğru kişiyi
+5. Dedektif şüpheliyi sol tıkla işaretler: sınırsız ama yanlışı −1, ve kasabada tek işaret olur (yeni işaret kendi ve
+   diğer dedektiflerin işaretlerini kaldırır); işareti ve yaklaşık bölgesini herkes görür. Savcı doğru kişiyi
    sol tıkla yakalar: yakalama sınırsız ama yanlışı −1 ve her denemede savcının kimliği 10 sn suçlulara açılır.
    İşaretlenen suçlunun ekran kenarı kızarır; imleçteki birinin kılığına Q ile girerse (−1) işaret kalkar. Suçlu
    imleçteki kişiyi sol tıkla öldürür (sınırsız).
-6. Tur biter: iki suçlu yakalanırsa kanun kazanır. Süre dolarsa, iki savcı da ölürse ya da dedektiflerin işaret
-   hakları boşa tükenirse suçlular kazanır.
+6. Tur biter: iki suçlu yakalanırsa kanun kazanır. Süre dolarsa ya da iki savcı da ölürse suçlular kazanır.
 
 ## Tuşlar
 
@@ -101,14 +112,14 @@ Ses sağ üstteki düğmeden açılır (başlangıçta kapalı).
 | Suçlular kazanır | Serbest kalan her suçlu +5 |
 | Serbest geçen her tam dakika | Suçluya +1, kazansa da kaybetse de |
 | Doğru yakalama | Savcıya +1, o kişide aktif işareti olan dedektife +1 |
-| Yanlış yakalama / suçlu olmayanı işaretleme | −1 (yakalama sınırsız; yanlış işaret tur sonunda yazılır) |
+| Yanlış yakalama / suçlu olmayanı işaretleme | Her biri −1 (ikisi de sınırsız; yanlış işaret tur sonunda yazılır) |
 | Kılık değiştirme | −1 |
 | NPC / dedektif / savcı öldürme | −1 / +1 / +2 |
 
 ## Testler
 
 `npm test`: önce başsız kural testleri (`tests/rules-smoke.mjs`: rol dağıtımı ve seçimi, iz takvimi, izin tam basılan
-noktaya düşmesi ve iki iz türü, işaret ve yakalama, hak tükenmesi, kılık, cinayet ve iki savcının ölümü, puanlar, kutu,
+noktaya düşmesi ve iki iz türü, sınırsız işaret ve kasabada tek işaret, yakalama, kılık, cinayet ve iki savcının ölümü, puanlar, kutu,
 zıplama/iniş, izleyici, çok insanlı dünya, çevrim içi paketin gizli bilgi taşımaması, beş turluk otomatik maç). Sonra
 sunucuyu boş bir portta açar (testte tur 25 sn, `IZ_TUR_SN`): çevrim içi duman testi (`tests/online-smoke.mjs`, iki
 WebSocket istemcisi: lobi, koltuk, gizli roller, giriş evresi, hareket, kopup geri dönme, ayrılma), başsız Chromium ile
@@ -128,9 +139,9 @@ yetkili adımda bütün kurallar işler. İstemci modülleri dünyayı yalnızca
 | --- | --- |
 | `index.html`, `style.css` | Tam ekran düzen: sahne, HUD, rol kartı, harita, eylem çubuğu, ekranlar |
 | `game.js` | Giriş; `src/main.js`'i yükler (import map: `three` → `/vendor/three.module.js`) |
-| `src/config.js` | Tüm ayar sayıları: tur, hız, görüş, iz takvimi, haklar, puanlar, zorluk, kamera, saydamlık |
+| `src/config.js` | Tüm ayar sayıları: tur, hız, görüş, iz takvimi, menziller, puanlar, zorluk, kamera, saydamlık |
 | `src/world.js` | **Simülasyon**: dünya (bir ya da çok insan), tur kurulumu (seçilen rol ya da herkese rastgele), sabit adım, sol tık eylemi, izleyici |
-| `src/marks.js` | Dedektif işareti, savcı yakalaması ve ele verilmesi, haritadaki daire, hak tükenmesi bitişi |
+| `src/marks.js` | Dedektif işareti (kasabada tek işaret), savcı yakalaması ve ele verilmesi, haritadaki daire, iki savcının ölümü bitişi |
 | `src/criminal.js` | Suçlu eylemleri: kılık değiştirme (Q), öldürme (sol tık) |
 | `src/traces.js` | İz kaydı, zaman takvimine göre iki tür iz (tam basılan nokta ve yön), bot dedektif / savcıların iz algısı |
 | `src/crowd.js` | Hareket, zıplama, atılma, kutu taşıma, çalışma, kasabalı rutinleri ve rota izleme |
@@ -146,7 +157,8 @@ yetkili adımda bütün kurallar işler. İstemci modülleri dünyayı yalnızca
 | `server/rooms.mjs` | Odalar: lobi ve koltuklar, otoriter dünya, tur akışı, kopma / geri dönme, çevrim içi sayısı |
 | `src/screens.js` | Rol seçimi, çevrim içi lobi, tur girişi, kontroller, duraklatma, tur / maç sonu, skor tablosu |
 | `src/ui.js` | HUD, olay günlüğü, bağlam ipucu, eylem çubuğu, dünya etiketleri, savcı okları, kenar uyarısı, ses |
-| `src/input.js` | Klavye / fare, imleçle hedef seçme |
+| `src/input.js` | Klavye / fare, imleçle hedef seçme; dokunmatikte joystick, dokunarak hedef, düğmeler |
+| `src/touch.js`, `src/gorunur-alan.js` | Dokunmatik katman (joystick, düğmeler, tam ekran) ve telefonda görünür alan kilidi |
 | `src/minimap.js` | Üstten 2B harita: kasaba, herkesin konumu (kimliksiz nokta), işaret daireleri, görüş çemberi |
 | `src/characters.js` | Kutu karakterler, instancing ile toplu çizim, ayak halkaları, imleç hedefi |
 | `src/fog.js` | Görüş sisi (three'nin sis parçaları karakter çevresi uzaklığına göre yeniden yazılır) |

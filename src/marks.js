@@ -7,8 +7,8 @@ import { finish } from './score.js';
 /**
  * Dedektifin işareti ve savcının yakalaması (ikisi de sol tık).
  *
- * İşaret: dedektif başına tur başına CFG.marks hak, aynı anda tek aktif işaret; bir kişide tek işaret. Başka bir
- * dedektif aynı kişiyi işaretlerse eski sahibine uyarı gider. İşaretleri herkes görür; haritaya kişinin kendisi değil,
+ * İşaret: sınırsızdır ama kasabada **aynı anda tek işaret** olur: her yeni işaret, işaretleyenin önceki işaretini ve diğer
+ * bütün dedektiflerin işaretlerini kaldırır (kaldırılanların sahiplerine uyarı gider). İşaretleri herkes görür; haritaya kişinin kendisi değil,
  * ondan sabit rastgele uzaklıkta merkezli bir daire düşer. Suçlu olmayanı işaretlemek −1'dir (tur sonunda yazılır) ve
  * işaret kalkmaz. İşaretli suçlu kılık değiştirince işaret kalkar; işaretli suçlunun ekran kenarı kızarır.
  *
@@ -46,7 +46,7 @@ export function dropMark(world, id, reason) {
     emit(world, 'İşaretlediğin kişi gözden kayboldu.', 'info', m.owner);
   }
   if (reason === 'replaced') {
-    emit(world, 'İşaretin başka bir dedektif tarafından kaldırıldı. Takibe devam et.', 'info', m.owner);
+    emit(world, 'İşaretin başka bir dedektifin yeni işaretiyle kaldırıldı. Takibe devam et.', 'info', m.owner);
     // Bot sahibi şüphesini kaybetmez: kendi işareti olmasa da o kişiyi izlemeyi sürdürür.
     const s = world.actors[m.owner].suspects.get(id);
     if (s) s.score = Math.max(s.score, world.level.markAt);
@@ -54,18 +54,16 @@ export function dropMark(world, id, reason) {
 }
 
 export function mark(world, a, b) {
-  if (!canAct(world, a) || a.role !== 'detective' || a.marks <= 0 || !active(b) || b === a || a.known.has(b.id)) return false;
+  if (!canAct(world, a) || a.role !== 'detective' || !active(b) || b === a || a.known.has(b.id)) return false;
   if (dist(a, b) > CFG.markRange || !sees(world, a, b, CFG.markRange)) return false;
   if (world.marks.get(b.id)?.owner === a.id) return false;
-  a.marks--;
-  const own = markBy(world, a.id);
-  if (own !== null) world.marks.delete(own);
-  if (world.marks.has(b.id)) dropMark(world, b.id, 'replaced');
+  // Kasabada tek işaret: kendi eskisi sessizce, başkalarınınki (aklanmış olanlar dahil) sahibine haber verilerek kalkar.
+  for (const [id, m] of [...world.marks]) { if (m.owner === a.id) world.marks.delete(id); else dropMark(world, id, 'replaced'); }
   const angle = world.random() * Math.PI * 2, r = world.random() * CFG.mapOffset;
   world.marks.set(b.id, { owner: a.id, ox: Math.cos(angle) * r, oz: Math.sin(angle) * r, cleared: false, time: world.time });
   // Yanlış işaretin bedeli tur sonunda yazılır: anında düşseydi işaretin doğru olup olmadığı tur içinde sızardı.
   if (b.role !== 'criminal') world.hidden[a.id] += CFG.scores.wrongMark;
-  emit(world, 'İşaret bırakıldı. Herkes bölgeyi görüyor.', 'clue', a.id);
+  emit(world, 'İşaret bırakıldı. Herkes bölgeyi görüyor; kasabadaki diğer işaretler kalktı.', 'clue', a.id);
   if (b.role === 'criminal') emit(world, 'Biri seni işaretledi! Gözden kaybolup kılık değiştir.', 'danger', b.id);
   checkRights(world);
   return true;
@@ -104,14 +102,11 @@ export function caughtNow(world, b) {
 }
 
 /**
- * Kanunun gücü tükenirse serbest suçlular kazanır: iki savcı da öldüyse ya da hayattaki dedektiflerin işaret hakları
- * bitip hiçbir aktif işaret serbest bir suçluyu göstermiyorsa. (Son hak doğru kişiye kullanıldıysa savcılara o
- * işareti değerlendirme şansı kalır.) Savcıların yakalaması sınırsızdır, o yüzden tükenmez.
+ * Kanunun gücü tükenirse serbest suçlular kazanır: iki savcı da öldüyse. İşaret ve yakalama sınırsızdır, o yüzden
+ * hak tükenmesi bitişi yoktur.
  */
 export function checkRights(world) {
   if (world.result || !criminals(world).some(active)) return;
   const all = contestants(world);
-  if (!all.some(a => a.role === 'prosecutor' && a.alive)) { finish(world, 'prosecutors'); return; }
-  const live = [...world.marks].some(([id, m]) => !m.cleared && world.actors[id].role === 'criminal' && active(world.actors[id]));
-  if (all.filter(a => a.role === 'detective' && a.alive).every(d => d.marks <= 0) && !live) finish(world, 'marks');
+  if (!all.some(a => a.role === 'prosecutor' && a.alive)) finish(world, 'prosecutors');
 }

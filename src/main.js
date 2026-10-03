@@ -5,6 +5,8 @@ import { CAMERA, CFG } from './config.js';
 import { followPath, routine } from './crowd.js';
 import { buildEnvironmentView } from './environment.js';
 import { createInput } from './input.js';
+import { gorunurAlanaKilitle } from './gorunur-alan.js';
+import { enterFullscreen, touchDevice } from './touch.js';
 import { createMinimap } from './minimap.js';
 import { createNetClient } from './net/client.js';
 import { onlineEnabled } from './platform.js';
@@ -28,24 +30,29 @@ import { createWorld, spectate, startRound, step } from './world.js';
  */
 export async function start(root) {
   const $ = s => root.querySelector(s), canvas = $('#world');
-  const renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.65));
+  // Telefon / tablet (Çayır Muhafızı'ndaki gibi): dokunmatik kontroller, kök tarayıcı çubuklarının bıraktığı görünür alana
+  // kilitlenir (src/gorunur-alan.js, style.css → html.vv), kenar yumuşatma kapalı, piksel oranı 1, gölge haritası küçük.
+  const touch = touchDevice();
+  root.classList.toggle('touch', touch);
+  const gorunurAlan = gorunurAlanaKilitle(window);
+  const renderer = new T.WebGLRenderer({ canvas, antialias: !touch, alpha: false });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, touch ? 1 : 1.65));
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
   renderer.outputColorSpace = T.SRGBColorSpace; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.2;
   const scene = new T.Scene(), fog = createVisionFog(scene);
   const camera = new T.OrthographicCamera(-35, 35, 25, -25, 0.1, 400), offset = new T.Vector3(...CAMERA.offset), focus = new T.Vector3();
   scene.add(new T.HemisphereLight('#e5eed6', '#42544a', 2));
   const sun = new T.DirectionalLight('#ffe4ac', 3.1);
-  sun.position.set(-30, 65, 25); sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096);
+  sun.position.set(-30, 65, 25); sun.castShadow = true; sun.shadow.mapSize.setScalar(touch ? 2048 : 4096);
   Object.assign(sun.shadow.camera, { left: -125, right: 125, top: 125, bottom: -125, far: 220 });
   sun.shadow.normalBias = 0.035; sun.shadow.bias = -0.0002;
   scene.add(sun);
 
   const demo = () => { const w = createWorld({ seed: Date.now() }); startRound(w); return w; };
-  const app = { world: demo(), match: null, level: 'normal', playing: false, paused: false, choosing: false, shownResult: false, online: false, inLobby: false, spectator: 0, hover: null, zoom: 25, w: innerWidth, h: innerHeight };
+  const app = { world: demo(), match: null, level: 'normal', playing: false, paused: false, choosing: false, shownResult: false, online: false, inLobby: false, spectator: 0, hover: null, target: null, touch, zoom: 25, w: innerWidth, h: innerHeight, left: 0, top: 0 };
   app.project = (x, y, z) => {
     const p = new T.Vector3(x, y, z).project(camera);
-    return { x: (p.x * 0.5 + 0.5) * app.w, y: (-0.5 * p.y + 0.5) * app.h, inside: Math.abs(p.x) < 0.94 && Math.abs(p.y) < 0.88 };
+    return { x: app.left + (p.x * 0.5 + 0.5) * app.w, y: app.top + (-0.5 * p.y + 0.5) * app.h, inside: Math.abs(p.x) < 0.94 && Math.abs(p.y) < 0.88 };
   };
 
   const kit = createMeshKit(), town = buildEnvironmentView(scene, app.world.env, kit);
@@ -65,6 +72,7 @@ export async function start(root) {
       screens.roundIntro();
     },
     newMatch() {
+      if (touch) enterFullscreen();
       app.match = createWorld({ seed: Date.now(), level: app.level });
       document.body.classList.add('playing');
       for (const id of ['#menu', '#scene-caption', '#menu-footer']) $(id).hidden = true;
@@ -99,10 +107,10 @@ export async function start(root) {
     },
     tab: down => (down ? screens.scoreToggle(true) : ($('#scores').hidden = true)),
     blur() { if (app.playing && !app.online && !app.paused && !app.world.result) screens.pauseMenu(); },
-    use() { if (app.playing && !app.paused) ui.toast('İmlecin altında kimse yok.'); },
+    use() { if (app.playing && !app.paused) ui.toast(touch ? 'Önce dünyada birine dokunarak seç.' : 'İmlecin altında kimse yok.'); },
     map() { if (app.playing) minimap.toggle(); },
     sound: type => ui.tone(type === 'use' ? 520 : 330, 0.08),
-  });
+  }, touch ? root : null);
 
   // Tek başına / Oda kur: önce hazırlık penceresi (botların zorluğu), sonra maç ya da oda.
   $('#start').onclick = () => screens.setup('solo', level => { app.level = level; hooks.newMatch(); });
@@ -147,6 +155,7 @@ export async function start(root) {
   });
   /** Çevrim içi tur başladı (ya da geri bağlanınca sürüyor): kopya dünya çizilir, rol girişi açılır. */
   function enterOnline(world) {
+    if (touch && !app.online) enterFullscreen();
     app.world = world; app.online = true; app.inLobby = false; app.playing = true; app.paused = false; app.shownResult = false; app.spectator = 0;
     characters.reset(world); ui.clear();
     focus.set(world.player.x, 0, world.player.z);
@@ -188,11 +197,15 @@ export async function start(root) {
   hooks.toggleSound = () => { app.soundOn = !app.soundOn; $('#sound').textContent = soundLabel(); ui.tone(330, 0.3); return soundLabel(); };
   hooks.soundLabel = soundLabel;
 
+  // Çizim alanı pencereyi değil kökü doldurur: telefonda kök görünür alana kilitlidir (adres çubuğu, klavye).
   function resize() {
-    app.w = innerWidth; app.h = innerHeight;
+    const r = root.getBoundingClientRect();
+    app.w = Math.round(r.width) || innerWidth; app.h = Math.round(r.height) || innerHeight; app.left = r.left; app.top = r.top;
     renderer.setSize(app.w, app.h, false);
   }
   window.addEventListener('resize', resize); resize();
+  new ResizeObserver(resize).observe(root);
+  document.addEventListener('fullscreenchange', () => setTimeout(() => { gorunurAlan.guncelle(); resize(); }, 120));
 
   /** Menü arka planı: kasabalılar iş noktaları arasında yavaşça dolaşır, kurallar işlemez. */
   function menuStep(world, dt) {
@@ -202,6 +215,14 @@ export async function start(root) {
       followPath(world, a, dt * 0.6);
     }
     separate(world);
+  }
+
+  /** Dokunmatik düğmeler yalnızca oyunda ve pencere kapalıyken görünür; büyük düğmenin adı role göre. */
+  let touchShown = null, touchRole = '';
+  function syncTouch(world) {
+    const on = app.playing && !app.paused && $('#overlay').hidden; // skor tablosu açıkken de kalır: SKOR bırakılınca kapanır
+    if (on !== touchShown) { touchShown = on; input.touch.show(on); }
+    if (world.player && world.player.role !== touchRole) { touchRole = world.player.role; input.touchRole(touchRole); }
   }
 
   let last = performance.now(), uiClock = 0;
@@ -218,6 +239,7 @@ export async function start(root) {
       } else if (app.playing && !app.paused) { step(world, dt, input.take()); if (world.result) screens.showResult(); }
       else if (!app.playing) menuStep(world, dt);
       input.pickHover();
+      if (touch) syncTouch(world);
       const eyes = app.playing ? spectate(world, app.spectator) : null;
       // Kamera: oyunda izlenen karaktere yakın, menüde kasabanın üstünde geniş.
       if (eyes) focus.lerp(new T.Vector3(eyes.x, 0, eyes.z), 1 - Math.exp(-CAMERA.follow * dt));
@@ -262,7 +284,7 @@ export async function start(root) {
       newMatch: hooks.newMatch, pick: hooks.pick, close: screens.close, minimap, net,
       step(seconds) { for (let t = 0; t < seconds; t += 0.05) step(app.world, 0.05); ui.update(); },
       /** Testte oyuncunun rolünü tur içinde değiştirir (hakları da o role göre). */
-      setRole(role) { const p = app.world.player; p.role = role; p.marks = role === 'detective' ? CFG.marks : 0; ui.clear(); ui.update(); },
+      setRole(role) { app.world.player.role = role; ui.clear(); ui.update(); },
     };
   }
 }

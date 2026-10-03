@@ -87,7 +87,8 @@ export function createUI(root, app, hooks) {
   function metrics(world, p) {
     if (p.role === 'criminal') return `Serbest süre: <b>${clock(world.time)}</b> · dakikası +1<br>Sol tık öldürür · Q kılık (−1)${world.marks.has(p.id) ? '<br><b class="warn">İŞARETLENDİN · KILIK DEĞİŞTİR</b>' : ''}`;
     if (p.role === 'prosecutor') return `Yakalama: <b>sınırsız</b> · yanlışı −1<br>${world.revealed.get(p.id) > world.time ? `<b class="warn">KİMLİĞİN AÇIK · ${Math.ceil(world.revealed.get(p.id) - world.time)} SN</b>` : `Haritadaki işaret: <b>${marksFor(world, p).filter(m => !m.cleared).length}</b>`}`;
-    return `İşaret hakkın: <b>${p.marks} / ${CFG.marks}</b><br>Aktif işaretin: <b>${markBy(world, p.id) !== null ? 'Var' : 'Yok'}</b>`;
+    const other = world.marks.size && markBy(world, p.id) === null;
+    return `İşaret: <b>sınırsız</b> · yanlışı −1<br>Kasabadaki işaret: <b>${markBy(world, p.id) !== null ? 'Senin' : other ? 'Başkasının' : 'Yok'}</b>`;
   }
 
   function context(world, p) {
@@ -111,18 +112,17 @@ export function createUI(root, app, hooks) {
       els.score.textContent = world.scores[p.id] + ' PUAN' + (world.tally[p.id] ? ` · BU TUR ${signed(world.tally[p.id])}` : '');
       els.role.textContent = ROLE[p.role]; els.objective.textContent = objectiveOf(p.role);
       setHTML(els.metrics, metrics(world, p));
-      // Çevrim içi kopyada roller gizli: serbest suçlu bayrakları ve kanunun kalan işaret hakkı sunucudan gelir.
+      // Çevrim içi kopyada roller gizli: serbest suçlu bayrakları sunucudan gelir.
       const free = world.remote ? world.crim.map(Boolean) : criminals(world).map(active);
-      const lawMarks = world.remote ? world.lawMarks : world.actors.slice(0, 10).filter(a => a.role !== 'criminal' && a.alive).reduce((n, a) => n + a.marks, 0);
       setHTML(els.clues, free.map(f => (f ? '<span title="Serbest">◇</span>' : '<span class="processed" title="Yakalandı">✓</span>')).join(''));
-      els.status.textContent = `Serbest suçlu ${free.filter(Boolean).length}/2 · Kanunun işareti ${lawMarks}`;
+      els.status.textContent = `Serbest suçlu ${free.filter(Boolean).length}/2 · Kasabada işaret ${world.marks.size ? 'var' : 'yok'}`;
       eventLog(world);
       // Kalabalık geçerken ipucu hızla değişmesin: imleçte hedef yoksa her ipucu en az 0,45 sn kalır.
       const hint = context(world, p), now = performance.now();
       if (hint !== els.context._html && (app.hover || !hint || now - contextAt > 450)) { contextAt = now; setHTML(els.context, hint); }
       els.alert.classList.toggle('on', p.role === 'criminal' && world.marks.has(p.id) && active(p));
       for (const type of ['dash', 'use']) {
-        const off = type === 'dash' ? p.dashCd > 0 : p.role === 'criminal' ? p.killCd > 0 : p.role === 'detective' ? p.marks <= 0 : false;
+        const off = type === 'dash' ? p.dashCd > 0 : p.role === 'criminal' ? p.killCd > 0 : false;
         els.actions.querySelector(`[data-action="${type}"]`)?.classList.toggle('cooldown', off);
       }
       els.spectator.hidden = active(p);

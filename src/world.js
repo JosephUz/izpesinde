@@ -49,7 +49,7 @@ export function startRound(world, role = null) {
       id, name: (id < 10 && world.names[id]) || 'Kasabalı', role: roles[id] || 'civilian', ...p, y: 0, vy: 0, jumps: 0,
       appearance: Math.floor(world.random() * 10), hat: Math.floor(world.random() * 3),
       alive: true, caught: false, caughtAt: null, facing: 0, speed: 0, dashCd: 0, disguiseCd: 0, killCd: 0, dash: 0,
-      action: null, crate: null, carry: false, marks: 0, seenMarks: new Set(),
+      action: null, crate: null, carry: false, seenMarks: new Set(),
       known: new Set(), suspects: new Map(), followers: new Map(), seenTraces: new Set(), trail: [], trailClock: 0, traceClock: 0,
       think: world.random() * 2, wait: 0, region, job: '', path: [], goal: null,
     };
@@ -58,7 +58,6 @@ export function startRound(world, role = null) {
   for (const a of contestants(world)) {
     // Suçlular birbirini, dedektif ve savcılar savcıları tanır.
     for (const b of contestants(world)) if (a.id !== b.id && ((a.role === 'criminal' && b.role === 'criminal') || (a.role !== 'criminal' && b.role === 'prosecutor'))) a.known.add(b.id);
-    if (a.role === 'detective') a.marks = CFG.marks;
     if (a.role === 'criminal') a.traceClock = traceEvery(0) * (1 - (nth++) / 2);
   }
   world.crates = world.env.crates.map(c => ({ ...c, carrier: null }));

@@ -10,7 +10,7 @@ import { active, contestants, criminals } from '../roster.js';
  *  - İzler: yalnızca kendi rolünün izleri ve gözünün (ya da izlediğin kişinin) görüş alanındakiler.
  *  - Efektler (yakalama, kılık, cinayet halkası): yalnızca görüş alanındakiler.
  *  - Ele verilen savcılar: yalnızca suçlulara (ve savcının kendisine, geri sayımı için).
- *  - İşaretler, sönen daireler, serbest suçlu sayısı ve kanunun kalan işaret hakkı herkese açıktır (arayüzde de öyle).
+ *  - İşaretler, sönen daireler ve serbest suçlu sayısı herkese açıktır (arayüzde de öyle).
  *  - Olaylar: herkese açık olanlar ve yalnızca sana yazılanlar.
  */
 
@@ -33,7 +33,7 @@ export function stateFor(world, seat, eyes, since) {
   const events = world.events.filter(e => e.id > since && (e.to == null || e.to === seat));
   return {
     time: r2(world.time), eyes: eyes ? eyes.id : null,
-    me: { marks: me.marks, dashCd: r2(me.dashCd), killCd: r2(me.killCd), disguiseCd: r2(me.disguiseCd), crate: me.crate, tally: world.tally[seat] },
+    me: { dashCd: r2(me.dashCd), killCd: r2(me.killCd), disguiseCd: r2(me.disguiseCd), crate: me.crate, tally: world.tally[seat] },
     marks: [...world.marks].map(([id, m]) => [id, m.owner, r2(m.ox), r2(m.oz), m.cleared ? 1 : 0, r2(m.time)]),
     ghosts: world.ghosts.map(g => [r2(g.x), r2(g.z), r2(g.until)]),
     fx: world.effects.filter(seen).map(f => [f.type, r2(f.x), r2(f.z), r2(f.t)]),
@@ -41,7 +41,6 @@ export function stateFor(world, seat, eyes, since) {
     rev,
     crates: world.crates.map(c => [r2(c.x), r2(c.z), c.carrier ?? -1]),
     crim: criminals(world).map(c => (active(c) ? 1 : 0)),
-    law: contestants(world).filter(a => a.role !== 'criminal' && a.alive).reduce((n, a) => n + a.marks, 0),
     ev: events.map(e => [e.id, e.text, e.kind, r2(e.time)]),
   };
 }

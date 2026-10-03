@@ -43,3 +43,41 @@
 @media (max-width:760px){#menu{width:90%}#home-buttons{flex-wrap:wrap}#home-buttons #start{flex-basis:100%}.rule-cards{grid-template-columns:1fr 1fr 1fr;gap:10px}#toptools #sound{display:none}}
 a.secondary,a.secondary:visited{color:var(--paper)}#toptools a.icon,#toptools a.icon:visited{color:var(--paper)}
 @media (max-width:760px){#toptools #helpBtn{display:none}.home-meta{flex-wrap:wrap;gap:6px 16px}}
+/* Kök: telefonda tarayıcı çubuklarının bıraktığı görünür alana kilitlenir (src/gorunur-alan.js; Çayır Muhafızı ile aynı). */
+#iz-game{position:fixed;inset:0;overflow:hidden;--top:env(safe-area-inset-top,0px);--right:env(safe-area-inset-right,0px);--bottom:env(safe-area-inset-bottom,0px);--left:env(safe-area-inset-left,0px)}
+html.vv #iz-game{inset:auto;top:var(--vv-top);left:var(--vv-left);width:var(--vv-w);height:var(--vv-h)}
+#world,#vignette,#alert{position:absolute}
+#rotate{display:none}
+/* Dokunmatik: joystick, düğme kümesi, sıkıştırılmış HUD */
+#touch{position:absolute;inset:0;z-index:4;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.touch-zone{position:absolute;top:0;bottom:0;touch-action:none}.touch-zone.left{left:0;width:44%}.touch-zone.right{left:44%;right:0}
+.touch-stick{position:absolute;left:0;top:0;width:0;height:0;z-index:6;pointer-events:none}
+.touch-stick::before{content:"";position:absolute;left:-60px;top:-60px;width:120px;height:120px;border-radius:50%;background:#132720b0;border:2px solid #eee5cf55;box-shadow:0 6px 24px #0008}
+.touch-stick i{position:absolute;left:-27px;top:-27px;width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff6de,#d8b574);box-shadow:0 4px 14px #0008}
+.touch-buttons{position:absolute;inset:0;z-index:6;pointer-events:none}
+.tbtn{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;background:#132720d9;border:2px solid #eee5cf55;color:var(--paper);box-shadow:0 6px 20px #0008;pointer-events:auto;touch-action:none;transition:transform .08s,background .12s}
+.tbtn b{font:800 11px/1 Segoe UI,system-ui,sans-serif;letter-spacing:1px}.tbtn small{font:700 8px/1 Segoe UI,sans-serif;margin-top:4px;opacity:.8}
+.tbtn.on{transform:scale(.9);background:#2c4a3be6}.tbtn[hidden]{display:none!important}
+.tbtn[data-t=use]{right:calc(18px + var(--right));bottom:calc(16px + var(--bottom));width:96px;height:96px;background:#c9a65ee6;color:#1f2a22;border-color:#fff3}.tbtn[data-t=use] b{font-size:13px}.tbtn[data-t=use].on{background:#e2c27f}
+.tbtn[data-t=swap]{right:calc(128px + var(--right));bottom:calc(10px + var(--bottom));width:70px;height:70px;border-color:#e2483a99}
+.tbtn[data-t=jump]{right:calc(22px + var(--right));bottom:calc(126px + var(--bottom));width:64px;height:64px}
+.tbtn[data-t=dash]{right:calc(104px + var(--right));bottom:calc(92px + var(--bottom));width:62px;height:62px;border-color:#8fd0ff88}
+.tbtn[data-t=carry]{right:calc(210px + var(--right));bottom:calc(14px + var(--bottom));width:56px;height:56px}
+.tbtn[data-t=blend]{right:calc(184px + var(--right));bottom:calc(82px + var(--bottom));width:56px;height:56px}
+.tbtn[data-t=menu],.tbtn[data-t=score],.tbtn[data-t=map]{top:calc(8px + var(--top));height:40px;border-radius:20px}
+.tbtn[data-t=menu]{right:calc(10px + var(--right));width:44px}.tbtn[data-t=menu] b{font-size:18px}
+.tbtn[data-t=score]{right:calc(62px + var(--right));width:62px}.tbtn[data-t=map]{right:calc(132px + var(--right));width:70px}
+#iz-game.touch .controls:not(.touch-help){display:none}
+body.playing #iz-game.touch #toptools,body.playing #iz-game.touch #brand,#iz-game.touch #actionbar,#iz-game.touch #pauseBtn,#iz-game.touch .map-legend,#iz-game.touch #rolecard .eyebrow,#iz-game.touch #objective,#iz-game.touch #cluebar .eyebrow{display:none!important}
+#iz-game.touch #roundbar{top:calc(8px + var(--top));left:50%;transform:translateX(-50%);gap:10px;padding:5px 12px;font-size:9px}#iz-game.touch #timer{font-size:17px}
+#iz-game.touch #rolecard{top:calc(8px + var(--top));left:calc(8px + var(--left));width:170px;padding:8px 10px}#iz-game.touch #rolecard h2{font-size:17px;margin:0 0 4px}#iz-game.touch #rolemetrics{font-size:9px;line-height:1.6;padding-top:5px}
+#iz-game.touch #eventlog{top:calc(118px + var(--top));left:calc(8px + var(--left));width:190px;font-size:10px;line-height:1.4}#iz-game.touch .event{padding:6px 8px;margin:4px 0}#iz-game.touch .event:nth-last-child(n+3){display:none}
+#iz-game.touch #cluebar{top:calc(50px + var(--top));left:50%;right:auto;transform:translateX(-50%);width:auto;padding:4px 10px;display:flex;align-items:center;gap:8px}#iz-game.touch #clues{margin:0;gap:5px}#iz-game.touch #clues span{width:20px;height:22px;font-size:11px}#iz-game.touch #clueStatus{font-size:9px}
+#iz-game.touch #mapcard{top:calc(56px + var(--top));right:calc(8px + var(--right));bottom:auto;width:150px;padding:6px}#iz-game.touch #mapcard.large{width:min(340px,46vw)}#iz-game.touch .map-title{font-size:8px}
+#iz-game.touch #context{top:calc(84px + var(--top));bottom:auto;font-size:11px;padding:7px 12px;max-width:46vw}#iz-game.touch #context kbd{display:none}
+#iz-game.touch #spectator{bottom:calc(130px + var(--bottom))}#iz-game.touch #toast{top:calc(84px + var(--top))}
+#iz-game.touch .dialog{padding:16px}#iz-game.touch .dialog h2{font-size:22px}
+@media (orientation:portrait){body.playing #iz-game.touch #rotate{position:absolute;inset:0;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#172824;text-align:center;padding:30px}#rotate strong{font:26px Georgia,serif;color:var(--gold)}#rotate span{font-size:14px;color:#c9d3bd}}
+#iz-game.touch #mapcard{width:124px}#iz-game.touch .tbtn[data-t=jump]{bottom:calc(118px + var(--bottom))}
+@media (max-height:500px){#menu{top:calc(66px + var(--top))}#menu>.eyebrow:first-child,#scene-caption,.home-meta span:not(#online){display:none!important}#menu h1{font-size:30px;margin:2px 0 10px}#brand{top:14px}#toptools{top:14px}#nick{margin:6px 0 10px;padding:9px 12px}#home-buttons .primary{padding:13px 18px}.home-meta{margin-top:8px}#menu-footer{bottom:10px}}
+#iz-game.touch #toptools kbd{display:none}

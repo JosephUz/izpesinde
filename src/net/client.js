@@ -69,10 +69,10 @@ export function createNetClient(hooks) {
       remote: true, env, humans: new Set([msg.you]), names: msg.names, round: msg.round, seconds: msg.seconds, scores: msg.scores, history: msg.history,
       result: null, final: false, nextAt: 0, time: 0, events: [], serial: 0, effects: [], traces: [], marks: new Map(), revealed: new Map(),
       ghosts: [], tally: Array(10).fill(0), crates: env.crates.map(c => ({ ...c, carrier: null })), eyesId: msg.you,
-      crim: [1, 1], lawMarks: 0, phase: msg.phase, left: msg.left, leftAt: performance.now(),
+      crim: [1, 1], phase: msg.phase, left: msg.left, leftAt: performance.now(),
       actors: Array.from({ length: n }, (_, id) => ({
         id, name: id < 10 ? msg.names[id] : 'Kasabalı', role: undefined, x: 0, z: 0, y: 0, facing: 0, speed: 0, appearance: 0, hat: 0,
-        alive: true, caught: false, carry: false, action: null, wait: 0, marks: 0, known: new Set(), dashCd: 0, killCd: 0, disguiseCd: 0, crate: null,
+        alive: true, caught: false, carry: false, action: null, wait: 0, known: new Set(), dashCd: 0, killCd: 0, disguiseCd: 0, crate: null,
       })),
     };
     const me = w.actors[msg.you];
@@ -99,7 +99,7 @@ export function createNetClient(hooks) {
     w.time = st.time; stateAt = performance.now(); w.phase = st.phase; w.left = st.left; w.leftAt = stateAt;
     w.eyesId = st.eyes;
     if (st.eyes != null && st.eyes !== me.id) w.actors[st.eyes].role ??= me.role; // izlediğin kişi seninle aynı roldedir
-    Object.assign(me, { marks: st.me.marks, dashCd: st.me.dashCd, killCd: st.me.killCd, disguiseCd: st.me.disguiseCd, crate: st.me.crate });
+    Object.assign(me, { dashCd: st.me.dashCd, killCd: st.me.killCd, disguiseCd: st.me.disguiseCd, crate: st.me.crate });
     w.tally[me.id] = st.me.tally;
     w.marks = new Map(st.marks.map(([id, owner, ox, oz, cleared, time]) => [id, { owner, ox, oz, cleared: Boolean(cleared), time }]));
     w.ghosts = st.ghosts.map(([x, z, until]) => ({ x, z, until }));
@@ -107,7 +107,7 @@ export function createNetClient(hooks) {
     w.traces = st.tr.map(([id, x, z, dir, born]) => ({ id, x, z, dir, born, role: me.role }));
     w.revealed = new Map(st.rev);
     st.crates.forEach(([x, z, carrier], i) => { if (w.crates[i]) Object.assign(w.crates[i], { x, z, carrier: carrier < 0 ? null : carrier }); });
-    w.crim = st.crim; w.lawMarks = st.law;
+    w.crim = st.crim;
     for (const [id, text, kind, time] of st.ev) if (!w.events.some(e => e.id === id)) w.events.push({ id, text, kind, time, to: null });
     if (w.events.length > 60) w.events.splice(0, w.events.length - 60);
   }

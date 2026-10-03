@@ -31,7 +31,6 @@ test('Beş tur skoru korur, her tur tam 2/6/2 rol ve taze haklar', () => {
   const w = setup();
   for (let round = 1; round <= 5; round++) {
     assert.equal(w.round, round); assert.equal(counts(w), '2/6/2');
-    for (const d of role(w, 'detective')) assert.equal(d.marks, CFG.marks);
     finish(w, 'timeout');
     if (round < 5) assert.ok(startRound(w));
   }
@@ -78,21 +77,28 @@ test('Her iz anında iki iz düşer: dedektif ve savcı türü, gecikme kadar ö
   assert.equal(w.traces.filter(t => mine.includes(t)).length, 0, '2 sn sonra kaybolur');
 });
 
-test('İşaret hak harcar, dedektif başına tek aktif işaret, işaretleri herkes görür', () => {
+test('İşaret sınırsız, kasabada tek işaret: yeni işaret kendi ve başkalarının işaretlerini kaldırır; herkes görür', () => {
   const w = setup(), [d, e] = role(w, 'detective'), [c] = role(w, 'criminal'), n = civilian(w), p = role(w, 'prosecutor')[0];
   assert.equal(mark(w, d, p), false, 'tanınan savcı işaretlenemez');
-  assert.ok(mark(w, d, c)); assert.equal(d.marks, 2);
+  assert.ok(mark(w, d, c));
   assert.equal(marksFor(w, e).length, 1, 'suçlunun işaretini diğer dedektif de görür');
   assert.equal(mark(w, d, c), false, 'kendi hedefini yeniden işaretlemek reddedilir');
   assert.ok(mark(w, d, n)); assert.equal(w.marks.has(c.id), false, 'yeni işaret eskisini kaldırır');
   for (const x of [d, e, p, c]) assert.equal(marksFor(w, x).length, 1, 'suçlu olmayanın işaretini de herkes görür');
+  assert.ok(mark(w, e, c)); assert.deepEqual([...w.marks.keys()], [c.id], 'başka dedektifin işareti öncekini kaldırır');
+  assert.ok(w.marks.get(c.id).owner === e.id);
+  for (let i = 0; i < 8; i++) assert.ok(mark(w, i % 2 ? e : d, w.actors[20 + i]), 'işaret sınırsız');
+  assert.equal(w.marks.size, 1);
+  finish(w, 'timeout');
+  assert.equal(w.result.points[d.id], 5 * S.wrongMark, 'her yanlış işaret −1 (tur sonunda)');
+  assert.equal(w.result.points[e.id], 4 * S.wrongMark);
 });
 
 test('Başka dedektif aynı kişiyi işaretlerse eski sahibine uyarı gider', () => {
   const w = setup('detective'), c = role(w, 'criminal')[0], other = role(w, 'detective').find(d => d !== w.player);
   assert.ok(mark(w, w.player, c)); assert.ok(mark(w, other, c));
   assert.equal(w.marks.get(c.id).owner, other.id);
-  assert.ok(w.events.some(e => e.text.includes('başka bir dedektif tarafından kaldırıldı')));
+  assert.ok(w.events.some(e => e.text.includes('başka bir dedektifin yeni işaretiyle kaldırıldı')));
 });
 
 test('Yanlış işaret tur sonunda −1 yazılır ve haritada kalır', () => {
@@ -117,14 +123,10 @@ test('Yakalama sınırsız ve menzilli; her yanlış −1, tur bitmez; her denem
   assert.equal(w.revealed.get(p.id), w.time + CFG.reveal);
 });
 
-test('İşaret hakları biterse tur biter; ama aktif bir işaret serbest suçluyu gösteriyorsa bitmez', () => {
-  let w = setup();
-  for (const d of role(w, 'detective')) for (let i = 0; i < 3; i++) mark(w, d, i % 2 ? w.actors[30] : civilian(w));
-  assert.equal(w.result.kind, 'marks');
-  w = setup();
-  const dets = role(w, 'detective'), c = role(w, 'criminal')[0];
-  for (const d of dets) d.marks = 0;
-  dets[0].marks = 1; assert.ok(mark(w, dets[0], c)); assert.equal(w.result, null);
+test('Çok sayıda yanlış işaret turu bitirmez (hak tükenmesi bitişi yok)', () => {
+  const w = setup();
+  for (const d of role(w, 'detective')) for (let i = 0; i < 5; i++) mark(w, d, w.actors[20 + i * 2 + (d.id % 2)]);
+  assert.equal(w.result, null);
 });
 
 test('Yalnızca suçlu kılık değiştirir; her değişim −1, işaret kalkar, haritada sönen daire kalır', () => {
@@ -148,7 +150,7 @@ test('Görülen kılık değişimi takibi korur, görülmeyen koparır', () => {
 test('Öldürme sınırsız (kısa beklemeli): kasabalı −1, dedektif +1, savcı +2', () => {
   const w = setup(), [a, b] = role(w, 'criminal'), d = role(w, 'detective')[0], p = role(w, 'prosecutor')[0];
   assert.equal(murder(w, a, b), false, 'ortak hedeflenemez');
-  assert.ok(murder(w, a, d)); assert.equal(d.alive, false); assert.equal(d.marks, 0); assert.equal(w.tally[a.id], S.killDetective);
+  assert.ok(murder(w, a, d)); assert.equal(d.alive, false); assert.equal(w.tally[a.id], S.killDetective);
   assert.equal(murder(w, a, civilian(w)), false, 'çift tıklamaya karşı bekleme');
   a.killCd = 0; assert.ok(murder(w, a, civilian(w))); assert.equal(w.tally[a.id], S.killDetective + S.killCivilian);
   a.killCd = 0; assert.ok(murder(w, a, w.actors[21])); assert.equal(w.tally[a.id], S.killDetective + 2 * S.killCivilian);

@@ -48,7 +48,6 @@ Büyük bir ortaçağ kasabasında geçen; kalabalığa karışma, iz sürme, ta
   1. **İki suçlu da yakalanırsa** kanun tarafı kazanır.
   2. **Süre dolduğunda** en az bir suçlu serbestse suçlular kazanır.
   3. **İki savcı da ölürse** suçlular kazanır.
-  4. **Hayattaki dedektiflerin işaret hakları tükenirse** ve hiçbir aktif işaret serbest bir suçluyu göstermiyorsa suçlular kazanır. (Son hak doğru kişiye kullanıldıysa savcılara o işareti değerlendirme şansı tanınır.)
 
 ## 5. İzler
 
@@ -73,11 +72,10 @@ Büyük bir ortaçağ kasabasında geçen; kalabalığa karışma, iz sürme, ta
 
 ## 6. İşaretleme (dedektif)
 
-- Her dedektifin turda **3 işaret hakkı** vardır. **Sol tık**, imlecin altındaki görüş alanındaki karakteri işaretler (menzil 12).
-- Her dedektifin aynı anda **tek aktif işareti** olur; yeni işaret kendi eski işaretini kaldırır.
-- Bir kişinin üzerinde tek işaret olur. Başka bir dedektif aynı kişiyi işaretlerse eski işaret sahibine uyarı gider: *"İşaretin başka bir dedektif tarafından kaldırıldı. Takibe devam et."*
+- İşaret **sınırsızdır**. **Sol tık**, imlecin altındaki görüş alanındaki karakteri işaretler (menzil 12).
+- Kasabada **aynı anda tek işaret** olur: her yeni işaret, işaretleyenin önceki işaretini ve **diğer bütün dedektiflerin işaretlerini** (aklanmış olanlar dahil) kaldırır. İşareti kalkan dedektife uyarı gider: *"İşaretin başka bir dedektifin yeni işaretiyle kaldırıldı. Takibe devam et."*
 - **İşaretleri herkes görür** (dedektifler, savcılar, suçlular). İşaretli suçlu ayrıca işaretli olduğu sürece ekran kenarının kızarmasıyla uyarılır.
-- Suçlu olmayan birini (NPC ya da başka yarışmacı) işaretlemek **−1** puandır ve **işaret kalkmaz**; savcıyı yanlış yönlendirmiş olur. Bu ceza tur sonunda yazılır, böylece işaretin doğru olup olmadığı tur içinde sızmaz.
+- Suçlu olmayan birini (NPC ya da başka yarışmacı) işaretlemek **her seferinde −1** puandır ve işaret yenisi gelene kadar kalır; savcıyı yanlış yönlendirmiş olur. Bu ceza tur sonunda yazılır, böylece işaretin doğru olup olmadığı tur içinde sızmaz.
 - Tanınan savcılar işaretlenemez.
 
 ## 7. İşaretin görünüşü
@@ -106,7 +104,7 @@ Büyük bir ortaçağ kasabasında geçen; kalabalığa karışma, iz sürme, ta
 
 - **İmleçteki kişi + sol tık** öldürür (menzil 2,8). Öldürme **sınırsızdır**; yanlışlıkla çift tıklamayı önlemek için iki öldürme arasında 1 sn bekleme vardır. Diğer suçlu hedeflenemez.
 - Kasabalı öldürmek **−1**, dedektif öldürmek **+1**, savcı öldürmek **+2**. (İstekteki "savcı dışı her öldürme −1" ile "dedektif +1" çeliştiği için dedektif +1 olarak uygulandı.)
-- Ölen dedektifin kalan işaret hakları yanar. İki savcı da ölürse suçlular kazanır.
+- İki savcı da ölürse suçlular kazanır.
 - Cinayet suçluları açığa çıkarmaz.
 
 ## 11. Puanlar
@@ -147,7 +145,7 @@ Puanlar tur boyunca birikir, tur sonunda tek kez skora eklenir.
 
 ## 14. Botlar
 
-- **Dedektif:** Başka bir dedektifin işaretini ilk gördüğünde o kişiye biraz şüphe ekler (işaret yanlış olabilir); işaretli birini yeniden işaretleyip hak harcamaz. Görüş alanında iz görünce, izin çevresinde (gecikme süresince yürünebilecek mesafede) görünen kişilere şüphe puanı dağıtır. En şüpheliyi birkaç adım geriden izler, eşik aşılınca işaretler. Kılık değişimini görürse şüphe kesinleşir.
+- **Dedektif:** Başka bir dedektifin işaretini ilk gördüğünde o kişiye biraz şüphe ekler (işaret yanlış olabilir); işaretli birini yeniden işaretlemez; kasabada başka bir (aklanmamış) işaret varken, onu kaldıracağı için daha emin olmak ister. Görüş alanında iz görünce, izin çevresinde (gecikme süresince yürünebilecek mesafede) görünen kişilere şüphe puanı dağıtır. En şüpheliyi birkaç adım geriden izler, eşik aşılınca işaretler. Kılık değişimini görürse şüphe kesinleşir.
 - **Savcı:** Görünen işaretli kişiye gidip yakalar; yoksa işaret dairelerine (uzaksa koşarak) gider. İşaret yokken kendi izlerinden biriken şüpheyle en şüpheliye yaklaşır; her deneme kimliğini açtığı ve yanlışı −1 olduğu için işaretsiz birini ancak çok emin olunca yakalar. Aklanan işaretleri bırakır.
 - **Suçlu:** Kalabalık iş noktalarını tercih eder. Ele verilen bir savcı yakındaysa (kolay dışında) onu avlar. İşaretlenince zorluğa bağlı bir tereddütten sonra az kişinin gördüğü bir anda kılık değiştirir. Uzun süre peşine düşeni tenhada öldürmeyi deneyebilir.
 - Hiçbir bot gerçek rolleri ya da görüş alanı dışını bilmez. Zorluk; tepki süresi, hafıza, işaret eşiği, tereddüt ve öldürme eğilimini değiştirir.

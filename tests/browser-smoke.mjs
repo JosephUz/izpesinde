@@ -69,7 +69,6 @@ try {
   });
   await clickOn(30);
   assert.equal(await game(() => window.__iz.world.marks.get(30)?.owner), 0, 'dedektif sol tıkla işaretler');
-  assert.equal(await game(() => window.__iz.world.player.marks), 2);
   await game(() => window.__iz.setRole('prosecutor')); await clickOn(30);
   assert.ok(await game(() => window.__iz.world.marks.get(30)?.cleared), 'savcı sol tıkla yakalar (yanlış kişi: aklanır)');
   // Suçlu: imleçteki kişinin kılığına Q ile girer.

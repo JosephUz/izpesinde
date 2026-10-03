@@ -46,8 +46,10 @@ function thinkDetective(world, a) {
   }
   const top = [...a.suspects].sort((p, q) => q[1].score - p[1].score)[0];
   if (!top) { patrol(world, a, 30); return; }
-  const [id, s] = top, b = world.actors[id], need = world.level.markAt + (a.marks === 1 ? 0.6 : 0);
-  if (s.score >= need && a.marks > 0 && !world.marks.has(id) && sees(world, a, b, CFG.markRange) && mark(world, a, b)) return;
+  // Kasabada tek işaret var: yeni işaret başkasının (belki doğru) işaretini kaldıracağı için o varken daha emin olmak ister.
+  const other = [...world.marks.values()].some(m => !m.cleared && m.owner !== a.id);
+  const [id, s] = top, b = world.actors[id], need = world.level.markAt + (other ? 0.6 : 0);
+  if (s.score >= need && !world.marks.has(id) && sees(world, a, b, CFG.markRange) && mark(world, a, b)) return;
   const d = dist(a, s);
   if (d > 5) setGoal(world, a, { x: s.x + (a.x - s.x) / d * 4, z: s.z + (a.z - s.z) / d * 4 });
 }

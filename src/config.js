@@ -23,11 +23,11 @@ export const CFG = {
     schedule: [{ until: 60, every: 5, lag: 5 }, { until: 120, every: 4, lag: 4 }, { until: 180, every: 3, lag: 3 }, { until: 300, every: 3, lag: 2 }, { until: Infinity, every: 2, lag: 1 }],
   },
   /**
-   * Hak ve menziller: dedektifin işaret hakkı ve menzili; savcının yakalaması sınırsız, menzili catchRange, her denemede
+   * Menziller: dedektifin işareti sınırsız (kasabada tek işaret, yanlışı −1), menzili markRange; savcının yakalaması sınırsız, menzili catchRange, her denemede
    * kimliği `reveal` saniye suçlulara görünür; suçlunun kılığı (Q) ve öldürmesi (sol tık, menzil `reach`) sınırsız,
    * yanlışlıkla çift basmaya karşı kısa beklemeli.
    */
-  marks: 3, markRange: 12, catchRange: 4, reveal: 10, disguiseRange: 6, disguiseCooldown: 0.6, killCooldown: 1,
+  markRange: 12, catchRange: 4, reveal: 10, disguiseRange: 6, disguiseCooldown: 0.6, killCooldown: 1,
   /** Savcı haritasındaki işaret dairesi: yarıçap, merkezin kişiden en fazla uzaklığı, kılık değişince sönme süresi. */
   mapCircle: 12, mapOffset: 7, mapFade: 8,
   /** Puanlar tur boyunca birikir, tur sonunda tek kez skora eklenir (bkz. DEDEKTIF_OYUNU_TASARIM.md §11). */

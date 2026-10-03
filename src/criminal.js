@@ -11,7 +11,7 @@ import { active, canAct, contestants, emit, nearest, sees } from './roster.js';
  * Değişimi gören dedektif takibi sürdürür (ve yalnızca suçlular kılık değiştirdiği için kesinleşir); görmeyenler kaybeder.
  *
  * Öldürme: sınırsız (yanlışlıkla çift tıklamaya karşı CFG.killCooldown beklemeli). Kasabalı −1, dedektif +1, savcı
- * +2. Ölen dedektifin işaret hakları yanar; iki savcı da ölürse suçlular kazanır. Cinayet suçluları açığa çıkarmaz.
+ * +2. İki savcı da ölürse suçlular kazanır. Cinayet suçluları açığa çıkarmaz.
  */
 export function disguise(world, a, b) {
   if (!canAct(world, a) || a.role !== 'criminal' || a.disguiseCd > 0 || !active(b) || b === a) return false;
@@ -40,7 +40,6 @@ export function murder(world, a, b = nearest(world, a, b => b.role !== 'criminal
   dropCrate(world, b);
   const S = CFG.scores;
   world.tally[a.id] += b.role === 'detective' ? S.killDetective : b.role === 'prosecutor' ? S.killProsecutor : S.killCivilian;
-  if (b.role === 'detective') b.marks = 0;
   emit(world, 'Kasabada biri öldürüldü.', 'danger');
   world.effects.push({ type: 'murder', x: b.x, z: b.z, t: 1 });
   checkRights(world);

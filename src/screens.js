@@ -10,7 +10,7 @@ import { spectate } from './world.js';
  * saatiyle kapanır.
  */
 const OBJECTIVE = {
-  detective: 'Yalnızca dedektiflerin gördüğü izleri oku. Şüphelendiğini takip et, sol tıkla işaretle. Üç hakkın var.',
+  detective: 'Yalnızca dedektiflerin gördüğü izleri oku. Şüphelendiğini takip et, sol tıkla işaretle. İşaret sınırsız ama yanlışı −1; yeni işaret kasabadaki diğer işaretleri kaldırır.',
   prosecutor: 'Savcı izlerini ve işaretleri takip et, doğru kişiyi sol tıkla yakala. Yakalama sınırsız ama yanlışı −1 ve her denemede kimliğin 10 sn suçlulara açılır.',
   criminal: 'Süre bitene kadar yakalanma. Tenhada iz bırakırsın; işaretlenirsen imleçteki kişinin kılığına Q ile gir. Sol tık öldürür.',
 };
@@ -23,7 +23,6 @@ export const KEYS = {
 const ENDINGS = {
   capture: ['Kaçacak yer kalmadı.', 'İki suçlu da yakalandı. Kanun tarafı kazandı.'],
   timeout: ['Sır, kasabada kaldı.', 'Süre doldu. Serbest kalan suçlular kazandı.'],
-  marks: ['İzler soğudu.', 'Dedektiflerin işaret hakları tükendi. Suçlular kazandı.'],
   prosecutors: ['Kanun sustu.', 'İki savcı da öldü. Suçlular kazandı.'],
 };
 export const objectiveOf = role => OBJECTIVE[role];
@@ -87,7 +86,7 @@ export function createScreens(root, app, hooks) {
     const wasPaused = app.paused;
     app.paused = true;
     const roles = app.online ? 'Çevrim içi odada rolün her tur rastgele gelir, puanların kalır.' : 'Beş tur boyunca rolünü sen seçersin, puanların kalır.';
-    show(`<span class="eyebrow">KASABADA HAYATTA KALMA REHBERİ</span><h2>Her adım bir iz.</h2><div class="controls"><div><kbd>W A S D</kbd> Hareket</div><div><kbd>SHIFT</kbd> Koş</div><div><kbd>SPACE</kbd> Çift zıpla</div><div><kbd>SAĞ TIK</kbd> Atıl</div><div><kbd>SOL TIK</kbd> Dedektif işaretler · Savcı yakalar · Suçlu öldürür</div><div><kbd>E</kbd> Kutuyu al / bırak</div><div><kbd>F</kbd> İş noktasında çalış</div><div><kbd>Q</kbd> Suçlu: imleçteki kişinin kılığı</div><div><kbd>M</kbd> Haritayı büyüt / küçült</div><div><kbd>TAB</kbd> Skor / izleyicide hedef</div><div><kbd>ESC</kbd> Duraklat</div></div><p>Herkes yalnızca çevresindeki daireyi görür. Suçlular arkalarında iki saniye yerde kalan izler bırakır; izler başta 5 saniye arayla ve 5 saniye geriden düşer, tur ilerledikçe ikisi de kısalır. Dedektif izlerini yalnızca dedektifler, savcı izlerini yalnızca savcılar görür. İşaretleri herkes görür; işaretli suçlu kılık değiştirince işaret kalkar. Savcı her yakalamada 10 sn suçlulara görünür.</p><p>${roles} <b>Kazanmak için en yüksek kişisel skoru topla.</b></p><button class="primary" id="closeHelp">ANLADIM →</button>`);
+    show(`<span class="eyebrow">KASABADA HAYATTA KALMA REHBERİ</span><h2>Her adım bir iz.</h2><div class="controls"><div><kbd>W A S D</kbd> Hareket</div><div><kbd>SHIFT</kbd> Koş</div><div><kbd>SPACE</kbd> Çift zıpla</div><div><kbd>SAĞ TIK</kbd> Atıl</div><div><kbd>SOL TIK</kbd> Dedektif işaretler · Savcı yakalar · Suçlu öldürür</div><div><kbd>E</kbd> Kutuyu al / bırak</div><div><kbd>F</kbd> İş noktasında çalış</div><div><kbd>Q</kbd> Suçlu: imleçteki kişinin kılığı</div><div><kbd>M</kbd> Haritayı büyüt / küçült</div><div><kbd>TAB</kbd> Skor / izleyicide hedef</div><div><kbd>ESC</kbd> Duraklat</div></div>${app.touch ? '<div class="controls touch-help"><div><kbd>SOL YARI</kbd> Joystick · sonuna kadar it: koş</div><div><kbd>DOKUN</kbd> Dünyada hedef seç</div><div><kbd>BÜYÜK DÜĞME</kbd> Seçili hedefe rolün eylemi</div><div><kbd>KILIK</kbd> Suçlu: seçili kişinin kılığı (−1)</div><div><kbd>KUTU · ÇALIŞ</kbd> Kutu taşı · iş noktasında çalış</div><div><kbd>ZIPLA · ATIL</kbd> Çift zıpla · atıl</div><div><kbd>☰ · SKOR · HARİTA</kbd> Menü · basılı tut: skor · büyüt</div></div>' : ''}<p>Herkes yalnızca çevresindeki daireyi görür. Suçlular arkalarında iki saniye yerde kalan izler bırakır; izler başta 5 saniye arayla ve 5 saniye geriden düşer, tur ilerledikçe ikisi de kısalır. Dedektif izlerini yalnızca dedektifler, savcı izlerini yalnızca savcılar görür. İşaretleri herkes görür; işaretli suçlu kılık değiştirince işaret kalkar. Savcı her yakalamada 10 sn suçlulara görünür.</p><p>${roles} <b>Kazanmak için en yüksek kişisel skoru topla.</b></p><button class="primary" id="closeHelp">ANLADIM →</button>`);
     $('#closeHelp').onclick = () => {
       if (back) back();
       else { close(); app.paused = wasPaused; if (wasPaused && app.playing) pauseMenu(); }

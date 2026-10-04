@@ -161,3 +161,8 @@ body.playing #iz-game.touch #toptools,body.playing #iz-game.touch #brand,#iz-gam
 @media(prefers-reduced-motion:reduce){#fate,#fate .fate-art *,#fate .fate-art::before,#fate .fate-art::after,#fateFlash.on{animation-duration:.01s!important;animation-delay:0s!important}}
 /* Menüdeki sahne yazısı (sağ alt): açık zeminde okunsun diye Kutu Hisarı'ndaki gibi yarı saydam, bulanık koyu bir kutu. */
 #scene-caption{border-left:1px solid #d8b574aa;padding:20px 24px;background:rgba(42,44,43,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);text-shadow:0 1px 3px #0006}#scene-caption p{margin:10px 0 16px}#scene-caption small{color:#e4e3d2;letter-spacing:1.8px}
+
+
+/* Gösteri kipi (`?gosteri=son-takip`, bkz. src/gosteri.js): sahneyi bir betik sürer, girdi okunmaz. Oyunun HUD'ı
+   olduğu gibi kalır (sahnenin anlattığı durum oradan okunur); yalnız oyuncunun elini bekleyen parçalar gizlenir. */
+#iz-game.gosteri #toptools,#iz-game.gosteri #actionbar,#iz-game.gosteri #context,#iz-game.gosteri #spectator,#iz-game.gosteri #pauseBtn{display:none}

@@ -1,6 +1,6 @@
 // Tarayıcı dumanı testi: çalışan sunucuya (GAME_URL, varsayılan http://127.0.0.1:5197) başsız Chromium ile bağlanır.
 // Menü, rol seçimi, yürüme, çift zıplama, görüş sisi, duraklatma, gerçek sol tıkla işaret / yakalama / kılık, kenar
-// uyarısı, E ile kutu, suçlunun Q ile kılığı ve sol tıkla öldürmesi, görüş alanındaki sabit nesnelerin saydamlığı, iz oku, skor tablosu, küçük ekran ve beş turun ekran geçişleri denetlenir.
+// uyarısı, E ile kutu, suçlunun Q ile kılığı ve sol tıkla öldürmesi, görüş alanındaki sabit nesnelerin saydamlığı, iz oku, skor tablosu, küçük ekran, beş turun ekran geçişleri ve gösteri kipi (?gosteri=son-takip) denetlenir.
 // Ekran görüntüleri artifacts/ altına. Playwright yolu: PLAYWRIGHT_MODULE (npm test bunu kendisi bulur).
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -202,7 +202,41 @@ try {
   await page.waitForSelector('#next', { timeout: 5000 });
   assert.equal(await page.locator('#fate').isVisible(), false);
   assert.deepEqual(errors, []);
-  console.log('Tarayıcı dumanı testi geçti: menü, rol seçimi, hareket, sis, sol tık eylemleri, kutu, saydamlık, iz oku, elenme sahneleri, beş tur.');
+
+  // Gösteri kipi (`?gosteri=son-takip`, içerik videosu için; bkz. src/gosteri.js). Sahnenin zamanlaması kural
+  // testinde ölçülür (tests/rules-smoke.mjs); burada yalnızca tarayıcıda açıldığı denetlenir: menü atlanır, HUD
+  // sahnenin durumunu gösterir, girdiye bakan parçalar gizlenir ve savcı izin peşinde yürümeye başlar.
+  const gp = await browser.newPage({ viewport: { width: 1080, height: 1920 } }), gErrors = [];
+  gp.on('pageerror', e => gErrors.push(e.message));
+  gp.on('console', e => { if (e.type() === 'error') gErrors.push(e.text()); });
+  await gp.goto(url + '/?gosteri=son-takip&muzik=0');
+  await gp.waitForFunction(() => window.__gosteri);
+  const basla = await gp.evaluate(() => {
+    const w = window.__gosteri.world, y = w.actors.slice(0, 10);
+    return {
+      rol: w.player.role, savci: { x: w.player.x, z: w.player.z },
+      yakalanan: y.filter(a => a.caught).length, oluSavci: y.filter(a => !a.alive && a.role === 'prosecutor').length,
+      oluDedektif: y.filter(a => !a.alive && a.role === 'detective').length, kalan: w.seconds - w.time,
+    };
+  });
+  assert.equal(basla.rol, 'prosecutor', 'gösteride kamera savcıda');
+  assert.deepEqual([basla.yakalanan, basla.oluSavci, basla.oluDedektif], [1, 1, 4], 'bir suçlu yakalanmış, bir savcı ve dört dedektif ölü');
+  assert.ok(Math.abs(basla.kalan - 30) < 1.5, `tur sonuna 30 sn kala (${basla.kalan})`);
+  assert.equal(await gp.locator('#roundbar').isVisible(), true, 'HUD açık');
+  assert.equal(await gp.locator('#cluebar').isVisible(), true, 'suçlu / savcı / dedektif kutuları açık');
+  assert.equal(await gp.locator('#menu').isVisible(), false, 'menü atlanır');
+  assert.equal(await gp.locator('#actionbar').isVisible(), false, 'girdi çubuğu gizli');
+  // İzler iki saniyede bir düşüp iki saniye yaşar: tek bir ana bakmak yerine düşmeleri beklenir.
+  await gp.waitForFunction(() => window.__gosteri.world.traces.some(t => t.role === 'prosecutor'), null, { timeout: 8000 });
+  await gp.waitForTimeout(2500);
+  const sonra = await gp.evaluate(() => ({ saniye: window.__gosteri.saniye, uzaklik: Math.hypot(window.__gosteri.world.player.x, window.__gosteri.world.player.z) }));
+  assert.ok(sonra.saniye > 1.5, 'sahnenin saati işler');
+  assert.ok(sonra.uzaklik < Math.hypot(basla.savci.x, basla.savci.z), 'savcı pazara doğru ilerler');
+  await gp.screenshot({ path: 'artifacts/gosteri-son-takip.png' });
+  assert.deepEqual(gErrors, []);
+  await gp.close();
+
+  console.log('Tarayıcı dumanı testi geçti: menü, rol seçimi, hareket, sis, sol tık eylemleri, kutu, saydamlık, iz oku, elenme sahneleri, beş tur, gösteri kipi.');
 } finally {
   await browser.close();
 }

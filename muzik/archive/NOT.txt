@@ -4,4 +4,8 @@ Yusuf 4 Ekim: müzik videolarını izlerken bu parçalar çok gürültülü bulu
 odaklandırıcı sürümler geldi (bir üst klasör). Bunlar silinmedi: yanlış yapınca ne çıktığını göstersin diye
 burada duruyor. Oyunda çalmaz, web yayınına ve uygulamaya girmez (bkz. scripts/build-web.mjs).
 
+İkinci arşiv (4 Ekim 2026): iz-4-sessiz-kasaba, iz-5-dosyalar, iz-6-gece-nobeti. Sakin sürümler birbirine
+çok benzer ve oyunun konusuna uymuyor bulundu. Bu oyunun müziği sonra yeniden yapılacak; şimdilik oyunda müzik
+yok (src/muzik.js SAHNELER boş, Müzik düğmesi gizli). Parçalar silinmedi, burada duruyor.
+
 © 2026 JosephUz. Tüm hakları saklıdır.

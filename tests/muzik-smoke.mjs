@@ -8,10 +8,49 @@
 // ile bilerek açar, böylece öbür dumanı testleri 6 MB ses indirmez.
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
+import { MUZIK_VAR } from '../src/muzik.js';
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const url = process.env.GAME_URL || 'http://127.0.0.1:5197';
 await mkdir('artifacts', { recursive: true });
+
+// Şu an oyunda müzik yok (src/muzik.js SAHNELER boş): çalma ölçümü atlanır, yalnız şu denetlenir — `?muzik=1` ile
+// bile hiç ses dosyası istenmiyor, Müzik düğmesi üst çubukta ve Esc menüsünde yok, tarayıcı hatası yok.
+if (!MUZIK_VAR) {
+  const browser = await chromium.launch({ headless: true, args: ['--mute-audio', '--use-gl=angle', '--use-angle=d3d11', '--ignore-gpu-blocklist'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } }), errors = [], istekler = [];
+    page.on('pageerror', e => errors.push(e.message));
+    page.on('console', e => { if (e.type() === 'error') errors.push(e.text()); });
+    page.on('request', r => { if (/\/muzik\/.+\.mp3/.test(r.url())) istekler.push(r.url()); });
+    await page.goto(url + '/?test=1&muzik=1');
+    await page.waitForFunction(() => window.__iz);
+    await page.click('#nick');
+    await page.waitForTimeout(800);
+    const d = await page.evaluate(() => window.__iz.muzik.durum());
+    console.log('parçasız:', JSON.stringify(d));
+    assert.equal(d.caliyor, false, 'parça yokken hiçbir şey çalmamalı');
+    assert.equal(d.ogeler, 0, 'parça yokken hiç <audio> kurulmamalı');
+    assert.ok(await page.locator('#muzik').isHidden(), 'parça yokken üst çubuktaki Müzik düğmesi gizli olmalı');
+    await page.click('#start');
+    await page.waitForSelector('#setupGo'); await page.click('#setupGo');
+    await page.waitForSelector('[data-role="detective"]'); await page.click('[data-role="detective"]');
+    await page.waitForSelector('#beginRound'); await page.click('#beginRound');
+    await page.waitForFunction(() => window.__iz.app.playing && document.querySelector('#overlay').hidden, null, { timeout: 15000 });
+    await page.waitForTimeout(500);
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('#resume');
+    assert.equal(await page.locator('#pauseMuzik').count(), 0, 'parça yokken Esc menüsünde Müzik düğmesi olmamalı');
+    assert.equal((await page.evaluate(() => window.__iz.muzik.durum())).ogeler, 0, 'tur sırasında da ses dosyası kurulmamalı');
+    assert.deepEqual(istekler, [], 'hiç mp3 istenmemeli: ' + istekler.join(' | '));
+    assert.deepEqual(errors, [], 'tarayıcı hataları: ' + errors.join(' | '));
+    console.log('müzik yok: çalma ölçümü atlandı (düğmeler gizli, ses dosyası istenmiyor, hata yok).');
+  } finally {
+    await browser.close();
+  }
+  process.exit(0);
+}
+
 const browser = await chromium.launch({ headless: true, args: ['--mute-audio', '--use-gl=angle', '--use-angle=d3d11', '--ignore-gpu-blocklist'] });
 
 /** Sayfadaki `<audio>` öğelerinin özeti: hangi parça, duruyor mu, nereye geldi. */

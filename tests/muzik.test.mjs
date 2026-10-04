@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GERILIM_SN, sahneSec } from '../src/muzik.js';
+import { GERILIM_SN, MUZIK_VAR, sahneSec } from '../src/muzik.js';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const oku = f => readFileSync(path.join(root, f), 'utf8');
@@ -96,8 +96,17 @@ test('ses ve müzik tarayıcıda ayrı anahtarlarda saklanır, varsayılan müzi
   assert.ok(muzik.includes("localStorage.getItem('iz.muzik') !== 'off'"), 'müzik varsayılan olarak açık olmalı');
 });
 
+test('parça yoksa Müzik düğmesi (üst çubuk + Esc menüsü) gizlenir', () => {
+  const main = oku('src/main.js');
+  assert.ok(main.includes("hooks.muzikVar = () => !muzik.kapali && muzik.parcaVar;"), 'Esc menüsü parça yoksa düğmeyi koymamalı');
+  assert.ok(main.includes("$('#muzik').hidden = muzik.kapali || !muzik.parcaVar;"), 'üst çubuk parça yoksa düğmeyi gizlemeli');
+});
+
 test('her parça ve lisans dosyası yerinde', () => {
-  for (const f of ['iz-5-dosyalar.mp3', 'iz-6-gece-nobeti.mp3', 'iz-4-sessiz-kasaba.mp3', 'LISANS.txt']) {
+  // Şu an oyunda müzik yok (src/muzik.js SAHNELER boş): parçalar muzik/archive/ altında durur, yalnız lisans denetlenir.
+  if (!MUZIK_VAR) console.log('müzik yok: parça dosyası denetimi atlandı');
+  const parcalar = MUZIK_VAR ? ['iz-5-dosyalar.mp3', 'iz-6-gece-nobeti.mp3', 'iz-4-sessiz-kasaba.mp3'] : [];
+  for (const f of [...parcalar, 'LISANS.txt']) {
     const boy = readFileSync(path.join(root, 'muzik', f)).length;
     assert.ok(boy > 0, `muzik/${f} olmalı`);
     if (f.endsWith('.mp3')) assert.ok(boy <= 3 * 1024 * 1024, `muzik/${f} 3 MB'ı aşmamalı (${boy})`);

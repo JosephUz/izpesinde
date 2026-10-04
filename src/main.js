@@ -230,7 +230,8 @@ export async function start(root) {
   }
   hooks.soundLabel = soundLabel;
   hooks.muzikLabel = muzikLabel;
-  hooks.muzikVar = () => !muzik.kapali;
+  // Parça yoksa (SAHNELER boş, bkz. src/muzik.js) Müzik düğmesi ne üst çubukta ne Esc menüsünde görünür.
+  hooks.muzikVar = () => !muzik.kapali && muzik.parcaVar;
   hooks.syncMenu = syncMenu;
   hooks.toggleSound = () => {
     app.soundOn = !app.soundOn;
@@ -239,7 +240,7 @@ export async function start(root) {
     return soundLabel();
   };
   hooks.toggleMuzik = () => { muzik.ac(); syncMenu(); return muzikLabel(); };
-  $('#muzik').hidden = muzik.kapali;
+  $('#muzik').hidden = muzik.kapali || !muzik.parcaVar;
   syncMenu();
 
   // Çizim alanı pencereyi değil kökü doldurur: telefonda kök görünür alana kilitlidir (adres çubuğu, klavye).

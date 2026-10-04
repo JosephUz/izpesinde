@@ -10,9 +10,15 @@
 // `node tests/standart-cubuk.mjs`.
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
+import { MUZIK_VAR } from '../src/muzik.js';
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const url = process.env.GAME_URL || 'http://127.0.0.1:5197';
+// Şu an oyunda müzik yok (src/muzik.js SAHNELER boş): Müzik düğmesi çubukta da Esc menüsünde de gizlidir, sıra
+// geri kalan düğmelerle denetlenir. Parçalar geri gelince düğme kendiliğinden döner, bu test de dörtlüyü bekler.
+if (!MUZIK_VAR) console.log('müzik yok: Müzik düğmesi beklenmiyor (çubuk ve Esc menüsü üç düğmeyle denetlenir)');
+const CUBUK_BEKLENEN = MUZIK_VAR ? ['homeLink', 'sound', 'muzik', 'helpBtn'] : ['homeLink', 'sound', 'helpBtn'];
+const MENU_BEKLENEN = ['resume', 'pauseHelp', 'pauseSound', ...(MUZIK_VAR ? ['pauseMuzik'] : []), 'quit', "josephuz.com'a dön"];
 await mkdir('artifacts', { recursive: true });
 
 /** Masaüstü ve üç telefon tutuşu. Dar yatay (iPhone SE / 8) çubuğun en sıkıştığı ölçüdür. */
@@ -60,7 +66,7 @@ try {
     await page.screenshot({ path: `artifacts/standart-cubuk-${ad}-giris.png` });
     console.log(JSON.stringify({ ekran: `${ekran.width}x${ekran.height}`, ad, cubuk, marka, sira, satir, hatalar }));
 
-    assert.deepEqual(sira, ['homeLink', 'sound', 'muzik', 'helpBtn'],
+    assert.deepEqual(sira, CUBUK_BEKLENEN,
       `${ad}: standart dörtlü bu sırayla olmalı (okunan: ${sira.join(', ')})`);
     assert.ok(cubuk.left >= 0 && cubuk.right <= ekran.width, `${ad}: üst çubuk ekrandan taşıyor (${cubuk.left}..${cubuk.right})`);
     assert.ok(cubuk.top >= 0 && cubuk.bottom <= ekran.height, `${ad}: üst çubuk ekranın dışında (${cubuk.top}..${cubuk.bottom})`);
@@ -100,7 +106,7 @@ try {
   await page.screenshot({ path: 'artifacts/standart-cubuk-dar-duraklatma.png' });
   console.log(JSON.stringify({ kart, son, dugmeler }));
 
-  assert.deepEqual(dugmeler, ['resume', 'pauseHelp', 'pauseSound', 'pauseMuzik', 'quit', "josephuz.com'a dön"],
+  assert.deepEqual(dugmeler, MENU_BEKLENEN,
     'Esc menüsünün sırası standart olmalı');
   assert.ok(son.bottom <= DAR.height, `Esc menüsünün son düğmesi ekrandan taşıyor (${son.bottom} > ${DAR.height})`);
   assert.ok(kart.bottom <= DAR.height && kart.top >= 0, 'Esc penceresi ekrandan taşıyor');
@@ -117,7 +123,7 @@ try {
   await mPage.waitForSelector('#beginRound'); await mPage.click('#beginRound');
   await mPage.waitForFunction(() => window.__iz.app.playing && document.querySelector('#overlay').hidden, null, { timeout: 15000 });
   await mPage.keyboard.press('Escape');
-  await mPage.waitForSelector('#pauseMuzik');
+  await mPage.waitForSelector(MUZIK_VAR ? '#pauseMuzik' : '#resume');
   await mPage.waitForTimeout(300);
   await mPage.screenshot({ path: 'artifacts/standart-cubuk-masaustu-duraklatma.png' });
   const mKart = await mPage.evaluate(`(${OLC})('#overlay .dialog')`);

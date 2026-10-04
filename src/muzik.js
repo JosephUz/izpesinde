@@ -1,5 +1,6 @@
 /**
- * Oyun içi müzik: üç parça, üç sahne, çapraz geçiş.
+ * Oyun içi müzik: üç sahne, çapraz geçiş. **Şu an parça yok** (4 Ekim 2026; bkz. SAHNELER): aşağıdaki sahne düzeni
+ * eski parçaların adlarıyla anlatılır, yeni parçalar gelince aynı düzen kullanılır.
  *  - **sakin** (`Gece Nöbeti`): ana menü, hazırlık, çevrim içi oda / koltuk bekleme, rol seçimi, tur girişi, mola,
  *    tur ve maç sonu — tek parça, kendi kendine döner.
  *  - **mac** (`Dosyalar`): tur sürerken ana tema.
@@ -18,11 +19,18 @@
  * Dosya yolları **görelidir** (`muzik/...`): aynı dosyalar Capacitor'ın `https://localhost/` kökünde de çalışır
  * (bkz. scripts/build-web.mjs).
  */
+// ŞU AN OYUNDA MÜZİK YOK (Yusuf 4 Ekim 2026: "diğer oyunlardaki müzikleri şimdilik kaldıralım"). Sakin sürümler
+// birbirine çok benzer ve konuya uymuyor bulundu; parçalar silinmedi, muzik/archive/ altında (bkz. NOT.txt). Bu
+// oyunun müziği sonra yeniden yapılacak. Listeler boşken hiçbir dosya istenmez, hiçbir şey çalmaz ve Müzik düğmesi
+// (üst çubuk + Esc menüsü) gizlenir (main.js `parcaVar`). Yeni parçalar buraya eklenince düğme kendiliğinden döner.
+// Eski düzen: sakin ['iz-6-gece-nobeti'], mac ['iz-5-dosyalar'], gerilim ['iz-4-sessiz-kasaba', 'iz-5-dosyalar'].
 const SAHNELER = {
-  sakin: ['iz-6-gece-nobeti'],
-  mac: ['iz-5-dosyalar'],
-  gerilim: ['iz-4-sessiz-kasaba', 'iz-5-dosyalar'],
+  sakin: [],
+  mac: [],
+  gerilim: [],
 };
+/** Çalınacak en az bir parça var mı? Yoksa müzik hiç kurulmaz, düğmesi de gösterilmez. */
+export const MUZIK_VAR = Object.values(SAHNELER).some(liste => liste.length > 0);
 /** Turun son bu kadar saniyesinde gerilim parçasına geçilir. */
 export const GERILIM_SN = 60;
 /** Çapraz geçiş süresi (sn): sahne değişiminde ve parça bitmeden önce. */
@@ -166,7 +174,7 @@ export function createMuzik(root) {
     dokunuldu = true;
     uygula(0.8);
   }
-  if (!kapali) {
+  if (!kapali && MUZIK_VAR) {
     for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, ilkDokunus, { passive: true });
     document.addEventListener('visibilitychange', () => {
       gizli = document.hidden;
@@ -177,6 +185,8 @@ export function createMuzik(root) {
 
   return {
     kapali,
+    /** SAHNELER'de en az bir parça var mı (yoksa düğme gizlenir; bkz. MUZIK_VAR). */
+    parcaVar: MUZIK_VAR,
     /** Sahneyi değiştirir ('sakin' | 'mac' | 'gerilim' | null). Aynı sahne yeniden verilirse hiçbir şey olmaz. */
     sahne(ad) {
       if (kapali || ad === sahneAdi) return;

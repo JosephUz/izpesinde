@@ -70,6 +70,12 @@ iner (`←` `🔊` `♫` `?`), sıra ve düğmeler aynı kalır. Yerleşimi `tes
 
 ## Müzik
 
+**Şu an oyunda müzik yok** (4 Ekim 2026): sakin sürümler birbirine çok benzer ve konuya uymuyor bulundu, bu oyunun
+müziği sonra yeniden yapılacak. Parçalar silinmedi, `muzik/archive/` altında (bkz. `muzik/archive/NOT.txt`; yayına
+girmez). `src/muzik.js` → `SAHNELER` listeleri boş: hiçbir dosya istenmez, `Müzik` düğmesi üst çubukta ve Esc
+menüsünde gizlidir (`parcaVar` / `MUZIK_VAR`). Listelere parça eklenince düğme kendiliğinden döner; müzik testleri
+parça yokken çalma ölçümünü atlar ("müzik yok: atlandı"). Aşağıdaki düzen eski parçalarla kuruluydu:
+
 Üç parça, `muzik/` altında (128 kbps mp3; beste JosephUz, örnekler VSCO 2 CE / CC0 — `muzik/LISANS.txt`):
 **Pazar Meydanı** sakin (menü, hazırlık, lobi, rol seçimi, tur girişi, mola, sonuç), **Gizem** tur sırasında,
 **Suçlu Aramızda** turun son 60 saniyesinde ya da savcının kovalamacasında (ana temayla sırayla). Sahne seçimi saf bir

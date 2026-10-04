@@ -159,3 +159,5 @@ body.playing #iz-game.touch #toptools,body.playing #iz-game.touch #brand,#iz-gam
 @keyframes fateFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
 @media(max-height:760px){#fate{bottom:78px}}@media(max-width:650px),(max-height:500px){#fate{bottom:12px;width:min(470px,62vw);padding:10px 14px 10px 100px}#fate h2{font-size:22px;margin:2px 0 4px}#fate .fate-art{transform:scale(.68);left:0}#fate p{font-size:10.5px;margin-bottom:8px}#fate .eyebrow{font-size:8px}}
 @media(prefers-reduced-motion:reduce){#fate,#fate .fate-art *,#fate .fate-art::before,#fate .fate-art::after,#fateFlash.on{animation-duration:.01s!important;animation-delay:0s!important}}
+/* Menüdeki sahne yazısı (sağ alt): açık zeminde okunsun diye Kutu Hisarı'ndaki gibi yarı saydam, bulanık koyu bir kutu. */
+#scene-caption{border-left:1px solid #d8b574aa;padding:20px 24px;background:rgba(42,44,43,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);text-shadow:0 1px 3px #0006}#scene-caption p{margin:10px 0 16px}#scene-caption small{color:#e4e3d2;letter-spacing:1.8px}

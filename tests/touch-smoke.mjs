@@ -77,7 +77,8 @@ try {
   }
 
   // Dokunarak hedef seç: eylem yapmaz; büyük düğme seçili hedefi işaretler.
-  await game(() => { const w = window.__iz.world, p = w.player, n = w.actors[30]; n.x = p.x + 3; n.z = p.z + 1; n.think = 9999; n.path = []; n.y = 0; });
+  // Botlar uzağa alınıp dondurulur: araya bir botun işareti ya da cinayeti girmesin.
+  await game(() => { const w = window.__iz.world, p = w.player, n = w.actors[30]; for (const a of w.actors.slice(1)) { a.think = 9999; a.path = []; a.x = p.x + 80; a.z = p.z + 80; } n.x = p.x + 3; n.z = p.z + 1; n.y = 0; });
   await page.waitForTimeout(200);
   const q = await game(() => { const a = window.__iz.world.actors[30]; return window.__iz.app.project(a.x, 1.1, a.z); });
   await tap(q.x, q.y);

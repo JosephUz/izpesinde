@@ -97,7 +97,7 @@ test('ses ve müzik tarayıcıda ayrı anahtarlarda saklanır, varsayılan müzi
 });
 
 test('her parça ve lisans dosyası yerinde', () => {
-  for (const f of ['iz-1-gizem.mp3', 'iz-2-pazar-meydani.mp3', 'iz-3-sucu-aramizda.mp3', 'LISANS.txt']) {
+  for (const f of ['iz-5-dosyalar.mp3', 'iz-6-gece-nobeti.mp3', 'iz-4-sessiz-kasaba.mp3', 'LISANS.txt']) {
     const boy = readFileSync(path.join(root, 'muzik', f)).length;
     assert.ok(boy > 0, `muzik/${f} olmalı`);
     if (f.endsWith('.mp3')) assert.ok(boy <= 3 * 1024 * 1024, `muzik/${f} 3 MB'ı aşmamalı (${boy})`);

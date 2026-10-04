@@ -1,9 +1,9 @@
 /**
  * Oyun içi müzik: üç parça, üç sahne, çapraz geçiş.
- *  - **sakin** (`Pazar Meydanı`): ana menü, hazırlık, çevrim içi oda / koltuk bekleme, rol seçimi, tur girişi, mola,
+ *  - **sakin** (`Gece Nöbeti`): ana menü, hazırlık, çevrim içi oda / koltuk bekleme, rol seçimi, tur girişi, mola,
  *    tur ve maç sonu — tek parça, kendi kendine döner.
- *  - **mac** (`Gizem`): tur sürerken ana tema.
- *  - **gerilim** (`Suçlu Aramızda` ↔ `Gizem`): turun son 60 saniyesi ya da savcının kovalamacası (ekran kenarında
+ *  - **mac** (`Dosyalar`): tur sürerken ana tema.
+ *  - **gerilim** (`Sessiz Kasaba` ↔ `Dosyalar`): turun son 60 saniyesi ya da savcının kovalamacası (ekran kenarında
  *    işaret okları görünürken). Parça bitince ana temaya, o da bitince yeniden gerilime döner; araya sessizlik girmez.
  *
  * Çalma `<audio>` öğeleriyledir (Web Audio gerekmez): dosya akarak iner, sahne değişince ses düzeyi karşılıklı
@@ -19,9 +19,9 @@
  * (bkz. scripts/build-web.mjs).
  */
 const SAHNELER = {
-  sakin: ['iz-2-pazar-meydani'],
-  mac: ['iz-1-gizem'],
-  gerilim: ['iz-3-sucu-aramizda', 'iz-1-gizem'],
+  sakin: ['iz-6-gece-nobeti'],
+  mac: ['iz-5-dosyalar'],
+  gerilim: ['iz-4-sessiz-kasaba', 'iz-5-dosyalar'],
 };
 /** Turun son bu kadar saniyesinde gerilim parçasına geçilir. */
 export const GERILIM_SN = 60;
@@ -152,7 +152,7 @@ export function createMuzik(root) {
     suz(yeni, hedefSes(), sure);
   }
 
-  /** Aynı sahnenin sıradaki parçası (gerilimde `Suçlu Aramızda` ↔ `Gizem`). */
+  /** Aynı sahnenin sıradaki parçası (gerilimde `Sessiz Kasaba` ↔ `Dosyalar`). */
   function sonraki() {
     const liste = SAHNELER[sahneAdi];
     if (!liste || liste.length < 2) { if (aktif) { aktif.currentTime = 0; calistir(aktif); } return; }

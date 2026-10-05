@@ -35,7 +35,7 @@ başına oyun aynen oynanır.
 Menüde adını yaz, **Oda kur** de; çıkan kodu ya da "Linki kopyala" ile `?oda=KOD` linkini arkadaşlarına yolla.
 Lobide 10 koltuk vardır, **taraf yoktur**: gelen boş koltuğa oturur, boş bir koltuğa tıklayan oraya geçer, boş
 koltukları botlar doldurur. Botların zorluğunu ve Başlat'ı kuran seçer. **Rol seçimi yoktur**, her tur herkes
-rastgele rol alır. Tur akışı sunucunun saatiyle: 6 sn giriş (kimse kıpırdamaz) → 6 dk oyun → 12 sn tur sonu
+rastgele rol alır. Tur akışı sunucunun saatiyle: 6 sn giriş (kimse kıpırdamaz) → 6 dk oyun → 16 sn tur sonu (önce ~4 sn bitiş sahnesi, sonra tablo)
 tablosu → sonraki tur; beşinci turdan sonra oda lobiye döner. Esc menüsü oyunu durdurmaz.
 
 - **Sunucu otoriterdir** (`server/rooms.mjs`): her oda kendi dünyasını saniyede 20 adım koşturur, 10 Hz paket yollar.
@@ -114,7 +114,8 @@ yumuşatma kapalı, piksel oranı 1, gölge haritası küçüktür. Kök, taray�
    imleçteki kişiyi sol tıkla öldürür (sınırsız; menzil ayağının altındaki kırmızı halka). İmleçteki kişi halkanın
    içindeyse halka parlar.
    Yakalanır ya da öldürülürsen kamera karakterine yaklaşır: kafes iner ya da yere yığılırsın, altta bir kart açılır;
-   sonra takım arkadaşını izlersin.
+   sonra takım arkadaşını izlersin. Görüş alanındaki herkesin yakalanması / öldürülmesi de animasyonludur. Tur bir anda
+   bitmez: tablo açılmadan önce herkes ~4 sn bitiş sahnesini izler (kamera son olaya yaklaşır, büyük başlık).
    Sağ üstteki panel: suçlu (yakalanan ✓), savcı ve küçük dedektif kutucukları (ölen ✗; yalnızca sayı, kimlik değil).
 6. Tur biter: iki suçlu yakalanırsa kanun kazanır. Süre dolarsa ya da iki savcı da ölürse suçlular kazanır.
 

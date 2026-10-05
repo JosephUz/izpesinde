@@ -305,6 +305,54 @@ export async function start(root) {
   };
   let fateWorld = null, fateRound = 0, wasActive = null, fateHide = 0;
   app.fate = null;
+
+  /**
+   * Yakalanma / öldürülme anları (downs: actorId → { kind, at }, istemci saatiyle): her karede durum değişimi aranır,
+   * böylece tek başına da çevrim içinde de (sunucu yalnızca bayrak yollar) herkes her olayı animasyonla görür. Tur
+   * başında zaten düşmüş olanlar (izlenmemiş) kayda girmez, oturmuş hâliyle çizilir.
+   */
+  const downs = new Map(), downState = new Map();
+  let downsWorld = null, downsRound = 0;
+  function trackDowns(world, time) {
+    if (world !== downsWorld || world.round !== downsRound) { downsWorld = world; downsRound = world.round; downs.clear(); downState.clear(); endingClear(); }
+    if (!app.playing) return;
+    for (const a of world.actors) {
+      const now = !a.alive ? 'murder' : a.caught ? 'caught' : null, was = downState.get(a.id);
+      if (now && was === null) downs.set(a.id, { kind: now, at: time, id: a.id, x: a.x, z: a.z });
+      downState.set(a.id, now);
+    }
+  }
+
+  /**
+   * Tur sonu sahnesi: tur biter bitmez tablo açılmaz. Herkes END.hold saniye bitişi izler: kamera turu bitiren olaya
+   * (son yakalanan suçlu / son düşen savcı; süre dolduysa izlediği yere) yaklaşır, animasyon oynar, üstte büyük bir
+   * başlık (#ending) belirir. Sonra tur sonu tablosu açılır. Oyuncunun kendi elenme sahnesi de beklenir.
+   */
+  const END = { hold: 4.2, zoom: 13 };
+  const END_TEXT = {
+    capture: ['law', 'KANUN KAZANDI', 'Son suçlu da yakalandı.'],
+    prosecutors: ['crime', 'SUÇLULAR KAZANDI', 'Son savcı da düştü.'],
+    timeout: ['crime', 'SUÇLULAR KAZANDI', 'Süre doldu, suçlular kalabalıkta kayboldu.'],
+  };
+  app.ending = null;
+  function endingClear() { app.ending = null; app.endHold = false; const e = $('#ending'); if (e) { e.hidden = true; e.className = ''; } }
+  /** Tur bittiyse sahneyi başlatır / sürdürür; tur sonu tablosu açılabilecekse true. */
+  function endingUpdate(world, time) {
+    if (!world.result) { app.endHold = false; return false; }
+    if (!app.ending) {
+      const last = [...downs.values()].filter(d => time - d.at < 3).sort((a, b) => b.at - a.at)[0];
+      const [tone, title, text] = END_TEXT[world.result.kind] || ['crime', 'TUR BİTTİ', ''];
+      app.ending = { at: time, kind: world.result.kind, id: world.result.kind === 'timeout' ? null : last?.id ?? null };
+      const e = $('#ending');
+      e.className = tone; e.hidden = false;
+      e.querySelector('.eyebrow').textContent = `TUR ${world.round} BİTTİ`;
+      e.querySelector('h2').textContent = title; e.querySelector('p').textContent = text;
+      ui.tone(tone === 'law' ? 660 : 150, 0.7);
+    }
+    app.ending.t = time - app.ending.at;
+    app.endHold = app.ending.t < END.hold;
+    return !app.endHold && !app.fateHold;
+  }
   function fateCard(kind) {
     const card = $('#fate'), flash = $('#fateFlash'), [eyebrow, title, text] = FATE_TEXT[kind];
     card.className = kind; card.hidden = false;
@@ -339,26 +387,27 @@ export async function start(root) {
       if (app.online) {
         // Çevrim içi: simülasyon sunucuda; burada yalnızca ara değer, kendi karakterinin ileri kayması ve girdi gönderimi.
         net.update(dt, input.take(), app.paused || !$('#scores').hidden);
-        fateUpdate(world, time);
-        if (world.result && !app.fateHold) { $('#fate').hidden = true; screens.showResult(); }
+        trackDowns(world, time); fateUpdate(world, time);
+        if (endingUpdate(world, time)) { $('#fate').hidden = true; $('#ending').hidden = true; screens.showResult(); }
         screens.tickOnline();
       } else if (app.playing && !app.paused) {
         step(world, dt, gosteri ? gosteri.girdi(dt) : input.take());
         gosteri?.sahne(app, time);
-        fateUpdate(world, time);
-        if (world.result && !app.fateHold) { $('#fate').hidden = true; screens.showResult(); }
+        trackDowns(world, time); fateUpdate(world, time);
+        if (endingUpdate(world, time)) { $('#fate').hidden = true; $('#ending').hidden = true; screens.showResult(); }
       }
       else if (!app.playing) menuStep(world, dt);
       input.pickHover();
       if (touch) syncTouch(world);
-      if (!app.online && (!app.playing || app.paused)) fateUpdate(world, time);
-      // Elenme sahnesinde kamera oyuncunun kendi (yakalanmış / ölü) karakterindedir.
-      const eyes = app.playing ? (app.fateHold ? world.actors[app.fate.id] : spectate(world, app.spectator)) : null;
+      if (!app.online && (!app.playing || app.paused)) { trackDowns(world, time); fateUpdate(world, time); }
+      // Tur sonu sahnesinde kamera turu bitiren olayda, elenme sahnesinde oyuncunun kendi (yakalanmış / ölü) karakterindedir.
+      const endEyes = app.endHold && app.ending.id != null ? world.actors[app.ending.id] : null;
+      const eyes = app.playing ? (endEyes || (app.fateHold ? world.actors[app.fate.id] : spectate(world, app.spectator))) : null;
       // Kamera: oyunda izlenen karaktere yakın, menüde kasabanın üstünde geniş.
       if (eyes) focus.lerp(new T.Vector3(eyes.x, 0, eyes.z), 1 - Math.exp(-CAMERA.follow * dt));
       else if (!app.playing) focus.lerp(new T.Vector3(-7, 0, 1), 0.02);
-      const zoomTo = app.playing ? (app.fateHold ? Math.min(app.zoomPlay, FATE.zoom) : app.zoomPlay) : CAMERA.zoomMenu;
-      app.zoom += (zoomTo - app.zoom) * Math.min(1, dt * (app.fateHold ? 4 : app.playing ? 3 : 2));
+      const zoomTo = app.playing ? (app.fateHold ? Math.min(app.zoomPlay, FATE.zoom) : app.endHold ? Math.min(app.zoomPlay, END.zoom) : app.zoomPlay) : CAMERA.zoomMenu;
+      app.zoom += (zoomTo - app.zoom) * Math.min(1, dt * (app.fateHold || app.endHold ? 4 : app.playing ? 3 : 2));
       const aspect = app.w / app.h;
       Object.assign(camera, { left: -app.zoom * aspect, right: app.zoom * aspect, top: app.zoom, bottom: -app.zoom });
       camera.updateProjectionMatrix();
@@ -367,8 +416,8 @@ export async function start(root) {
       fog.update(eyes, dt);
       for (const s of town.signs) s.visible = !eyes || dist(s.position, eyes) <= CFG.vision + 0.5;
       for (const m of town.windmills) m.rotation.z += dt * 0.24;
-      characters.sync(world, eyes, app.playing, time, app.hover?.id ?? null, focus, app.fate);
-      effects.sync(world, eyes, app.playing, time, app.hover, app.fate);
+      characters.sync(world, eyes, app.playing, time, app.hover?.id ?? null, focus, downs);
+      effects.sync(world, eyes, app.playing, time, app.hover, downs);
       crates.sync(world);
       town.xray.update(world, eyes, dt);
       renderer.render(scene, camera);

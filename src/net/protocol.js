@@ -35,7 +35,7 @@ export const NET = {
   /** Cloudflare boşta bağlantıyı kesmesin: bu aralıkta ping (sn). */
   keepAlive: 20,
   /** Tur girişi (rolünü oku, kimse kıpırdamaz) ve tur sonu tablosu (sonraki tura kadar) süreleri (sn). */
-  intro: 6, result: 12,
+  intro: 6, result: 16,
   /** Sunucu saatinin yumuşatması ve doğrudan kurulduğu sapma (sn). */
   clockSmooth: 0.12, clockJump: 0.5,
   /**

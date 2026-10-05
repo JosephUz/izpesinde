@@ -83,13 +83,14 @@ try {
     const n = w.actors[30]; n.x = p.x + 2; n.z = p.z; n.appearance = (p.appearance + 3) % 10;
   });
   await clickOn(30);
-  assert.equal(await game(() => window.__iz.world.marks.get(30)?.owner), 0, 'dedektif sol tıkla işaretler');
+  // Uzağa yığılan bot dedektifler birbirini işaretlerse bizimki kalkar (kasabada tek işaret): oyuncunun işaret olayına da bakılır.
+  assert.ok(await game(() => window.__iz.world.marks.get(30)?.owner === 0 || window.__iz.world.events.some(e => e.to === 0 && e.text.startsWith('İşaret bırakıldı'))), 'dedektif sol tıkla işaretler');
   assert.equal(await game(() => window.__iz.reachRing()), null, 'dedektifin menzil halkası yok (menzil görüş)');
   await game(() => window.__iz.setRole('prosecutor')); await page.waitForTimeout(100);
   assert.deepEqual(await game(() => window.__iz.reachRing()), { role: 'prosecutor', radius: 4 }, 'savcının yakalama halkası');
   await page.screenshot({ path: 'artifacts/reach-prosecutor.png' });
   await clickOn(30);
-  assert.ok(await game(() => window.__iz.world.marks.get(30)?.cleared), 'savcı sol tıkla yakalar (yanlış kişi: aklanır)');
+  assert.ok(await game(() => window.__iz.world.marks.get(30)?.cleared || window.__iz.world.events.some(e => e.to === 0 && e.text === 'Yanlış kişi (−1).')), 'savcı sol tıkla yakalar (yanlış kişi: aklanır)');
   // Suçlu: imleçteki kişinin kılığına Q ile girer.
   await game(() => window.__iz.setRole('criminal')); await page.waitForTimeout(100);
   assert.deepEqual(await game(() => window.__iz.reachRing()), { role: 'criminal', radius: 2.8 }, 'suçlunun öldürme halkası');
@@ -196,11 +197,21 @@ try {
   assert.equal(await game(() => window.__iz.fateParts().cage), true, 'kafes');
   await page.waitForTimeout(1000);
   await page.screenshot({ path: 'artifacts/fate-caught.png' });
-  await game(() => window.__iz.finish());
-  await page.waitForTimeout(500);
+  // Başkasının öldürülmesi de animasyonludur: görüş alanındaki her ölüye bıçak izi ve kan göleti.
+  const pools0 = await game(() => window.__iz.fateParts().pools);
+  await game(() => { const w = window.__iz.world, p = w.player, n = w.actors[40]; n.x = p.x + 3; n.z = p.z + 2; n.alive = false; });
+  await page.waitForTimeout(300);
+  assert.equal(await game(() => window.__iz.fateParts().pools), pools0 + 1, 'görülen her cinayet animasyonlu');
+  // Tur sonu sahnesi: tablo hemen açılmaz, herkes bitişi izler (başlık + kamera).
+  await game(() => window.__iz.finish('capture'));
+  await page.waitForTimeout(1500);
+  assert.equal(await page.locator('#ending').isVisible(), true, 'tur sonu başlığı');
+  assert.equal(await page.locator('#ending h2').textContent(), 'KANUN KAZANDI');
+  await page.screenshot({ path: 'artifacts/ending.png' });
   assert.equal(await page.locator('#next').count(), 0, 'tur sonu ekranı sahne bitene kadar bekler');
-  await page.waitForSelector('#next', { timeout: 5000 });
+  await page.waitForSelector('#next', { timeout: 6000 });
   assert.equal(await page.locator('#fate').isVisible(), false);
+  assert.equal(await page.locator('#ending').isVisible(), false, 'tablo açılınca başlık gider');
   assert.deepEqual(errors, []);
 
   // Gösteri kipi (`?gosteri=son-takip`, içerik videosu için; bkz. src/gosteri.js). Sahnenin zamanlaması kural

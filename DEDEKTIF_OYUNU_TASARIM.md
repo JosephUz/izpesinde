@@ -142,6 +142,8 @@ Puanlar tur boyunca birikir, tur sonunda tek kez skora eklenir.
 
 ## 13. Ölüm, yakalanma, izleyici
 
+- **Her yakalama ve öldürme animasyonludur**, kimin başına gelirse gelsin ve görüş alanında kim izliyorsa: yakalananın üstüne kafes iner (elleri havada), öldürülen sendeleyip yere yığılır, bıçak izi çakar ve kan göleti yayılır. Çevrim içinde de aynıdır (istemci durum değişimini kendi saatiyle canlandırır).
+- **Tur sonu sahnesi:** Tur bir anda bitmez. Tur biter bitmez tablo açılmaz; tüm oyuncular ~4 sn bitişi izler: kamera turu bitiren olaya (son yakalanan suçlu / son düşen savcı; süre dolduysa izlenen yere) yaklaşır, üstte büyük başlık belirir (KANUN KAZANDI / SUÇLULAR KAZANDI ve kısa açıklama). Sonra tur sonu tablosu açılır.
 - **Elenme sahnesi:** Oyuncu yakalanır ya da öldürülürse kamera 3,4 sn kendi karakterine yaklaşır. Yakalananın üstüne tepeden demir bir kafes sekerek iner (yakalananlar ellerini kaldırır); öldürülen sendeleyip yere yığılır, çapraz kırmızı bir bıçak izi çakar, altında kan göleti yayılır. Ekran kenarı bir kez kararır / kızarır ve altta bir kart açılır (Yakalandın / Öldürüldün; parmaklık inen ya da bıçak izi çakan küçük bir çizim). Kart oyunu durdurmaz, 5,5 sn sonra ya da "İzlemeye geç" ile kapanır. Tur bu anda biterse tur sonu ekranı sahne bitene kadar bekler.
 
 - Yakalanan suçlu diğer suçluyu, ölen dedektif hayattaki dedektifleri, ölen savcı diğer savcıyı izler.
@@ -166,7 +168,7 @@ Puanlar tur boyunca birikir, tur sonunda tek kez skora eklenir.
 - **Oda kur / Odaya katıl**: ad yazılır, oda kurulunca 5 karakterlik bir kod (ve `?oda=KOD` linki) çıkar. Hesap yoktur.
 - **Lobi**: 10 koltuk, taraf yok. Gelen ilk boş koltuğa oturur; boş bir koltuğa tıklayan oraya geçer. Boş koltukları botlar doldurur (koltuğun bot adıyla). Botların zorluğunu ve **Başlat**'ı yalnızca kuran seçer; "hazır" yoktur.
 - **Roller**: her tur herkese rastgele; tanıma kuralı aynıdır (suçlular birbirini, kanun savcıları tanır).
-- **Tur akışı** sunucunun saatiyle: giriş (6 sn) → oyun (6 dk) → tur sonu tablosu (12 sn, roller açılır) → sonraki tur. Beşinci turdan sonra oda lobiye döner; aynı oyuncularla yeni maç başlatılabilir.
+- **Tur akışı** sunucunun saatiyle: giriş (6 sn) → oyun (6 dk) → tur sonu (16 sn: önce ~4 sn bitiş sahnesi, sonra tablo, roller açılır) → sonraki tur. Beşinci turdan sonra oda lobiye döner; aynı oyuncularla yeni maç başlatılabilir.
 - **Kopma**: sayfa yenilenince ya da bağlantı kopunca aynı koltuğa dönülür. Koparken karakterini **bot yönetir** (duran bir karakter gizli kimlik oyununda kendini ele verirdi); dönünce sana geçer. Odadan çıkanın karakteri tur sonuna kadar botta kalır. Bağlı kimse kalmayınca oda kapanır.
 - **Gizli bilgi paketlerde de gizlidir**: sunucu her oyuncuya yalnızca onun ekranında görebileceğini yollar. Konum ve görünüş herkese açıktır (haritada da görünür); roller yalnızca tanıdıklar için gelir (herkesinki tur sonunda); izler yalnızca kendi rolünün izleridir ve görüş alanındadır; ele verilen savcılar yalnızca suçlulara gider; özel bildirimler yalnızca sahibine.
 - **Akıcılık**: sunucu saniyede 20 adım koşar, 10 paket yollar; başkaları 0,1 sn geriden ara değerle çizilir, kendi karakterin yerel girdiyle anında yürür.

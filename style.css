@@ -166,3 +166,14 @@ body.playing #iz-game.touch #toptools,body.playing #iz-game.touch #brand,#iz-gam
 /* Gösteri kipi (`?gosteri=son-takip`, bkz. src/gosteri.js): sahneyi bir betik sürer, girdi okunmaz. Oyunun HUD'ı
    olduğu gibi kalır (sahnenin anlattığı durum oradan okunur); yalnız oyuncunun elini bekleyen parçalar gizlenir. */
 #iz-game.gosteri #toptools,#iz-game.gosteri #actionbar,#iz-game.gosteri #context,#iz-game.gosteri #spectator,#iz-game.gosteri #pauseBtn{display:none}
+/* Tur sonu sahnesi (#ending): tablo açılmadan önce üst ortada büyük başlık; harfler toplanarak gelir, altın / kırmızı çizgi açılır. */
+#ending{position:absolute;left:50%;top:15%;transform:translateX(-50%);z-index:9;text-align:center;pointer-events:none;width:min(720px,94vw);text-shadow:0 2px 24px #0b1a14,0 1px 3px #000a}
+#ending .eyebrow{display:block;animation:fadeUp .6s .1s ease-out both}
+#ending h2{font:clamp(34px,5.4vw,64px)/1.05 Georgia,serif;margin:10px 0 12px;letter-spacing:2px;animation:endTitle 1.1s .2s cubic-bezier(.2,.8,.2,1) both}
+#ending.law h2{color:#f3d58f}#ending.crime h2{color:#ff9d86}
+#ending i{display:block;height:2px;width:min(420px,70vw);margin:0 auto;background:linear-gradient(90deg,transparent,var(--gold),transparent);transform:scaleX(0);animation:barShut .8s .7s ease-out both}
+#ending.crime i{background:linear-gradient(90deg,transparent,#e2483a,transparent)}
+#ending p{font:italic 17px Georgia,serif;color:#eee5cf;margin:12px 0 0;animation:fadeUp .7s 1s ease-out both}
+@keyframes endTitle{from{opacity:0;letter-spacing:22px;filter:blur(6px)}to{opacity:1;letter-spacing:2px;filter:none}}
+@media(max-height:500px){#ending{top:8%}#ending h2{font-size:30px;margin:4px 0 6px}#ending p{font-size:13px}}
+@media(prefers-reduced-motion:reduce){#ending *{animation-duration:.01s!important;animation-delay:0s!important}}

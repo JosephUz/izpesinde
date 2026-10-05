@@ -10,11 +10,12 @@ import { carry, dash, followPath, jump, move } from '../src/crowd.js';
 import { REGIONS } from '../src/environment.js';
 import { arrest, caughtNow, mark, marksFor } from '../src/marks.js';
 import { blocked, dist, safe } from '../src/physics.js';
-import { contestants, emit, sees } from '../src/roster.js';
+import { active, contestants, criminals as criminalsOf, emit, sees } from '../src/roster.js';
 import { roundFor, stateFor } from '../src/net/visibility.js';
 import { finish } from '../src/score.js';
 import { traceEvery, traceLag } from '../src/traces.js';
 import { createWorld, spectate, startRound, step } from '../src/world.js';
+import { SON_TAKIP, createSonTakip } from '../src/gosteri.js';
 
 const S = CFG.scores;
 const setup = (role = null) => {
@@ -300,4 +301,44 @@ test('Yerdeki karakterler birbirinin içinden geçmez; zıplayan geçer, ölü e
   assert.ok(dist(a, b) < 0.1, 'havadaki itilmez');
   b.alive = false; Object.assign(c, { x: b.x, z: b.z }); step(w, 0.05);
   assert.ok(dist(b, c) < 0.1, 'ölünün üstüne basılır');
+});
+
+test('Gösteri sahnesi (?gosteri=son-takip): durum kurulur, savcı izi sürer, yakalama müziğin saniyesine düşer', () => {
+  const g = createSonTakip(), w = g.world, K = SON_TAKIP;
+  const savci = w.actors[0], suclu = w.actors[K.suclu], pazar = REGIONS[0], koru = REGIONS[2];
+  // Turun son 30 saniyesi: izler en sık aralıkta düşer.
+  assert.equal(w.time, CFG.seconds - K.kalan);
+  assert.equal(traceEvery(w.time), 2); assert.equal(traceLag(w.time), 1);
+  // Sahnenin anlattığı durum: oyuncu savcı, birinci suçlu yakalanmış, bir savcı ve dört dedektif ölü.
+  assert.equal(w.player, savci); assert.equal(savci.role, 'prosecutor');
+  assert.equal(counts(w), '2/6/2');
+  assert.equal(criminalsOf(w).filter(a => a.caught).length, 1, 'birinci suçlu yakalanmış');
+  assert.equal(role(w, 'prosecutor').filter(a => !a.alive).length, 1, 'bir savcı ölü');
+  assert.equal(role(w, 'detective').filter(a => !a.alive).length, 4, 'dört dedektif ölü');
+  assert.ok(active(suclu), 'ikinci suçlu serbest');
+  // Kaçış odunluktan (Kuzey korusu) başlar, savcı izi sürecek kadar geridedir.
+  assert.ok(dist(suclu, koru) < 25, 'suçlu kuzey korusunda başlar');
+  assert.ok(Math.abs(dist(savci, suclu) - K.ara) < 1.5, 'savcı takip arası kadar geride');
+
+  const app = { fate: null };
+  let izGordu = 0, yakalamaAt = null, sonucAt = null, kafesIner = null;
+  for (let i = 0; i < 30 * 21; i++) {
+    const time = i / 30;
+    step(w, 1 / 30, g.girdi(1 / 30));
+    g.sahne(app, time);
+    if (app.fate) app.fate.t = time - app.fate.at; // main.js fateUpdate'in yaptığı
+    const tutar = Boolean(app.fate && app.fate.t < 3.4); // main.js FATE.hold
+    if (w.traces.some(t => t.role === 'prosecutor' && dist(t, savci) < CFG.vision)) izGordu++;
+    if (yakalamaAt === null && suclu.caught) yakalamaAt = g.saniye;
+    if (kafesIner === null && app.fate && app.fate.t > 0) kafesIner = g.saniye;
+    if (sonucAt === null && w.result && !tutar) sonucAt = g.saniye;
+  }
+  assert.ok(izGordu > 30 * 10, `savcı izleri görüş alanında sürer (${izGordu} kare)`);
+  // Müzikteki işaretler: 16,0 yakalama · 16,5 parmaklıkların inişi · 18,0 çözülme (bkz. liste.json `isaretler`).
+  assert.ok(Math.abs(yakalamaAt - K.yakalama) < 0.25, `yakalama ${K.yakalama} sn (${yakalamaAt})`);
+  assert.ok(dist(suclu, pazar) < 14, 'yakalama pazar meydanında olur');
+  assert.ok(kafesIner < K.parmaklik + 0.1, 'kafes parmaklık vuruşlarında inmeye başlar');
+  assert.ok(Math.abs(sonucAt - K.cozulme) < 0.1, `tur sonu ekranı ${K.cozulme} sn (${sonucAt})`);
+  assert.equal(w.result.kind, 'capture');
+  assert.equal(app.fate.kind, 'caught'); assert.equal(app.fate.id, suclu.id);
 });

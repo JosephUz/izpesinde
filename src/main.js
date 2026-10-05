@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { createVisionFog } from './fog.js';
+import { createSonTakip, gosteriKipi } from './gosteri.js';
 import { createCharacterView } from './characters.js';
 import { CAMERA, CFG } from './config.js';
 import { followPath, routine } from './crowd.js';
@@ -51,6 +52,12 @@ export async function start(root) {
   scene.add(sun);
 
   const demo = () => { const w = createWorld({ seed: Date.now() }); startRound(w); return w; };
+  /**
+   * Gösteri kipi (yalnız tarayıcı, `?gosteri=son-takip`; bkz. gosteri.js): içerik videosu için sahnelenmiş tek bir
+   * sahne. Menü atlanır, oyuncunun savcısını betik sürer, girdi okunmaz ve sunucuya bağlanılmaz. Normal oyun ve
+   * çevrim içi oda bu kipten hiç etkilenmez.
+   */
+  const gosteri = gosteriKipi() === 'son-takip' ? createSonTakip() : null;
   const app = { world: demo(), match: null, level: 'normal', playing: false, paused: false, choosing: false, shownResult: false, online: false, inLobby: false, spectator: 0, hover: null, target: null, touch, zoom: 25, w: innerWidth, h: innerHeight, left: 0, top: 0 };
   app.project = (x, y, z) => {
     const p = new T.Vector3(x, y, z).project(camera);
@@ -199,7 +206,7 @@ export async function start(root) {
   $('#code').onkeydown = e => { if (e.key === 'Enter') joinCode(); e.stopPropagation(); };
   $('#nick').onkeydown = e => e.stopPropagation();
   setServer(false);
-  if (networked) {
+  if (networked && !gosteri) {
     const linked = new URLSearchParams(location.search).get('oda');
     if (linked) { $('#join-row').hidden = false; $('#code').value = linked.toUpperCase(); }
     net.connect(nick() || 'İzci');
@@ -242,6 +249,21 @@ export async function start(root) {
   hooks.toggleMuzik = () => { muzik.ac(); syncMenu(); return muzikLabel(); };
   $('#muzik').hidden = muzik.kapali || !muzik.parcaVar;
   syncMenu();
+
+  // Gösteri: menü atlanır, sahnenin dünyası doğrudan oyuna girer. Oyunun kendi HUD'ı açık kalır (sahnenin anlattığı
+  // durum — yakalanmış suçlu, ölü savcı ve dedektifler — oradan okunur); yalnız girdiye bakan bölümler gizlenir
+  // (bkz. style.css `.gosteri`).
+  if (gosteri) {
+    root.classList.add('gosteri');
+    app.world = app.match = gosteri.world;
+    app.playing = true; app.paused = false; app.shownResult = false;
+    app.zoom = app.zoomPlay = gosteri.zoom;
+    document.body.classList.add('playing');
+    for (const id of ['#menu', '#scene-caption', '#menu-footer']) $(id).hidden = true;
+    $('#hud').hidden = false; $('#scores').hidden = true;
+    characters.reset(app.world); ui.clear();
+    focus.set(app.world.player.x, 0, app.world.player.z);
+  }
 
   // Çizim alanı pencereyi değil kökü doldurur: telefonda kök görünür alana kilitlidir (adres çubuğu, klavye).
   function resize() {
@@ -320,7 +342,12 @@ export async function start(root) {
         fateUpdate(world, time);
         if (world.result && !app.fateHold) { $('#fate').hidden = true; screens.showResult(); }
         screens.tickOnline();
-      } else if (app.playing && !app.paused) { step(world, dt, input.take()); fateUpdate(world, time); if (world.result && !app.fateHold) { $('#fate').hidden = true; screens.showResult(); } }
+      } else if (app.playing && !app.paused) {
+        step(world, dt, gosteri ? gosteri.girdi(dt) : input.take());
+        gosteri?.sahne(app, time);
+        fateUpdate(world, time);
+        if (world.result && !app.fateHold) { $('#fate').hidden = true; screens.showResult(); }
+      }
       else if (!app.playing) menuStep(world, dt);
       input.pickHover();
       if (touch) syncTouch(world);
@@ -365,6 +392,9 @@ export async function start(root) {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+
+  // Gösteri çekimi sahnenin saatini ve yakalamanın olup olmadığını buradan okur (kare kare çekim betiği).
+  if (gosteri) window.__gosteri = gosteri;
 
   if (new URLSearchParams(location.search).has('test')) {
     window.__iz = {

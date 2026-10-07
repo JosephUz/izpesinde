@@ -166,6 +166,14 @@ body.playing #iz-game.touch #toptools,body.playing #iz-game.touch #brand,#iz-gam
 /* Gösteri kipi (`?gosteri=son-takip`, bkz. src/gosteri.js): sahneyi bir betik sürer, girdi okunmaz. Oyunun HUD'ı
    olduğu gibi kalır (sahnenin anlattığı durum oradan okunur); yalnız oyuncunun elini bekleyen parçalar gizlenir. */
 #iz-game.gosteri #toptools,#iz-game.gosteri #actionbar,#iz-game.gosteri #context,#iz-game.gosteri #spectator,#iz-game.gosteri #pauseBtn{display:none}
+/* Üç rol gösterisinin (`?gosteri=roller`) direktif yazısı: ekranın ortasına yakın, yarı saydam koyu, yuvarlak köşeli
+   bir kutuda kalın beyaz yazı — Yakar Gol'ün rüzgar şutu shortundaki biçimin aynısı (bkz. yakargol #yg-gosteri-yazi).
+   Kutu yalnız gösteri kipinde kurulur (src/gosteri-roller.js), normal oyunda bu öğe hiç oluşmaz. */
+#iz-gosteri-yazi{position:absolute;left:50%;top:31%;transform:translate(-50%,-50%);z-index:8;
+  max-width:86%;padding:15px 36px;border-radius:999px;text-align:center;pointer-events:none;
+  background:#0b1714e0;border:2px solid #ffffff2e;box-shadow:0 14px 42px #04140fa6;
+  font:900 clamp(18px,4.3vw,50px)/1.2 Segoe UI,Arial,sans-serif;color:#fdf3da;text-shadow:0 3px 14px #05211bcc}
+#iz-gosteri-yazi[hidden]{display:none}
 /* Tur sonu sahnesi (#ending): tablo açılmadan önce üst ortada büyük başlık; harfler toplanarak gelir, altın / kırmızı çizgi açılır. */
 #ending{position:absolute;left:50%;top:15%;transform:translateX(-50%);z-index:9;text-align:center;pointer-events:none;width:min(720px,94vw);text-shadow:0 2px 24px #0b1a14,0 1px 3px #000a}
 #ending .eyebrow{display:block;animation:fadeUp .6s .1s ease-out both}

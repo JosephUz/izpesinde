@@ -75,7 +75,10 @@ export function createEffectsView(scene, kit) {
     /** Elenme sahnesi parçaları görünüyor mu (testler için). */
     fateShown: () => ({ cage: cagesShown > 0, pool: poolsShown > 0, cages: cagesShown, pools: poolsShown }),
     reachShown: () => { const e = Object.entries(reach).find(([, m]) => m.visible); return e ? { role: e[0], radius: CFG[REACH[e[0]][0]] } : null; },
-    sync(world, eyes, playing, time = 0, hover = null, downs = null) {
+    // izRol: izlerin hangi rolün gözüyle çizileceği. Normalde kameranın baktığı karakterin rolüdür; yalnız gösteri
+    // sahnesi (`?gosteri=roller`) suçlunun kamerasında savcı izlerini isteyebilir — suçlu kendi izini görmez ama
+    // videoda arkasında bıraktığı iz görünsün. Kuralları değiştirmez: yalnız çizim.
+    sync(world, eyes, playing, time = 0, hover = null, downs = null, izRol = null) {
       const seen = p => !eyes || dist(p, eyes) <= CFG.vision + 0.5;
       let nc = 0, np = 0;
       if (playing) for (const a of world.actors) {
@@ -111,7 +114,8 @@ export function createEffectsView(scene, kit) {
         m.material.opacity = inside ? 0.95 : 0.42 + Math.sin(time * 3) * 0.08;
       }
       const inSight = p => !eyes || dist(p, eyes) <= CFG.vision + 0.5;
-      const shown = playing && eyes ? world.traces.filter(t => t.role === eyes.role && inSight(t)) : [];
+      const izRolu = izRol || eyes?.role;
+      const shown = playing && eyes ? world.traces.filter(t => t.role === izRolu && inSight(t)) : [];
       shown.forEach((t, i) => {
         const g = traceView(i), k = (world.time - t.born) / CFG.trace.life, [core, halo] = TRACE_COLOR[t.role];
         g.visible = true; g.position.set(t.x, 0, t.z);

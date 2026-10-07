@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { createVisionFog } from './fog.js';
 import { createSonTakip, gosteriKipi } from './gosteri.js';
+import { createRoller } from './gosteri-roller.js';
 import { createCharacterView } from './characters.js';
 import { CAMERA, CFG } from './config.js';
 import { followPath, routine } from './crowd.js';
@@ -53,11 +54,14 @@ export async function start(root) {
 
   const demo = () => { const w = createWorld({ seed: Date.now() }); startRound(w); return w; };
   /**
-   * Gösteri kipi (yalnız tarayıcı, `?gosteri=son-takip`; bkz. gosteri.js): içerik videosu için sahnelenmiş tek bir
-   * sahne. Menü atlanır, oyuncunun savcısını betik sürer, girdi okunmaz ve sunucuya bağlanılmaz. Normal oyun ve
+   * Gösteri kipi (yalnız tarayıcı; bkz. gosteri.js ve gosteri-roller.js): içerik videosu için sahnelenmiş turlar.
+   * Menü atlanır, sahnenin yarışmacılarını betik sürer, girdi okunmaz ve sunucuya bağlanılmaz. Normal oyun ve
    * çevrim içi oda bu kipten hiç etkilenmez.
+   *  - `?gosteri=son-takip` — turun son 30 saniyesi, tek savcının gözünden.
+   *  - `?gosteri=roller` — kamera sırayla suçlu, savcı ve dedektifin gözünden bakar; ekranda direktif yazıları.
    */
-  const gosteri = gosteriKipi() === 'son-takip' ? createSonTakip() : null;
+  const kip = gosteriKipi();
+  const gosteri = kip === 'son-takip' ? createSonTakip() : kip === 'roller' ? createRoller(root) : null;
   const app = { world: demo(), match: null, level: 'normal', playing: false, paused: false, choosing: false, shownResult: false, online: false, inLobby: false, spectator: 0, hover: null, target: null, touch, zoom: 25, w: innerWidth, h: innerHeight, left: 0, top: 0 };
   app.project = (x, y, z) => {
     const p = new T.Vector3(x, y, z).project(camera);
@@ -263,6 +267,8 @@ export async function start(root) {
     $('#hud').hidden = false; $('#scores').hidden = true;
     characters.reset(app.world); ui.clear();
     focus.set(app.world.player.x, 0, app.world.player.z);
+    // HUD ilk kareden itibaren dolu olsun: kare kare çekimde ilk tik gelene kadar rol kartı boş kalıyordu.
+    ui.update();
   }
 
   // Çizim alanı pencereyi değil kökü doldurur: telefonda kök görünür alana kilitlidir (adres çubuğu, klavye).
@@ -401,12 +407,15 @@ export async function start(root) {
       if (touch) syncTouch(world);
       if (!app.online && (!app.playing || app.paused)) { trackDowns(world, time); fateUpdate(world, time); }
       // Tur sonu sahnesinde kamera turu bitiren olayda, elenme sahnesinde oyuncunun kendi (yakalanmış / ölü) karakterindedir.
+      // Gösteri sahnesi gözü de yakınlığı da kendi zaman çizelgesinden verebilir (`?gosteri=roller`: üç rolün gözü).
       const endEyes = app.endHold && app.ending.id != null ? world.actors[app.ending.id] : null;
-      const eyes = app.playing ? (endEyes || (app.fateHold ? world.actors[app.fate.id] : spectate(world, app.spectator))) : null;
-      // Kamera: oyunda izlenen karaktere yakın, menüde kasabanın üstünde geniş.
-      if (eyes) focus.lerp(new T.Vector3(eyes.x, 0, eyes.z), 1 - Math.exp(-CAMERA.follow * dt));
+      const eyes = app.playing ? (gosteri?.gozler?.() || endEyes || (app.fateHold ? world.actors[app.fate.id] : spectate(world, app.spectator))) : null;
+      // Kamera: oyunda izlenen karaktere yakın, menüde kasabanın üstünde geniş. Gösteride göz değişen karede odak
+      // zıplar (`app.odakSicra`): iki rol arası yumuşak kayma kasabanın yarısını süpüren bir savruluş olurdu.
+      if (eyes) focus.lerp(new T.Vector3(eyes.x, 0, eyes.z), app.odakSicra ? 1 : 1 - Math.exp(-CAMERA.follow * dt));
       else if (!app.playing) focus.lerp(new T.Vector3(-7, 0, 1), 0.02);
-      const zoomTo = app.playing ? (app.fateHold ? Math.min(app.zoomPlay, FATE.zoom) : app.endHold ? Math.min(app.zoomPlay, END.zoom) : app.zoomPlay) : CAMERA.zoomMenu;
+      app.odakSicra = false;
+      const zoomTo = gosteri?.yakinlik?.() ?? (app.playing ? (app.fateHold ? Math.min(app.zoomPlay, FATE.zoom) : app.endHold ? Math.min(app.zoomPlay, END.zoom) : app.zoomPlay) : CAMERA.zoomMenu);
       app.zoom += (zoomTo - app.zoom) * Math.min(1, dt * (app.fateHold || app.endHold ? 4 : app.playing ? 3 : 2));
       const aspect = app.w / app.h;
       Object.assign(camera, { left: -app.zoom * aspect, right: app.zoom * aspect, top: app.zoom, bottom: -app.zoom });
@@ -417,7 +426,7 @@ export async function start(root) {
       for (const s of town.signs) s.visible = !eyes || dist(s.position, eyes) <= CFG.vision + 0.5;
       for (const m of town.windmills) m.rotation.z += dt * 0.24;
       characters.sync(world, eyes, app.playing, time, app.hover?.id ?? null, focus, downs);
-      effects.sync(world, eyes, app.playing, time, app.hover, downs);
+      effects.sync(world, eyes, app.playing, time, app.hover, downs, gosteri?.izRol?.());
       crates.sync(world);
       town.xray.update(world, eyes, dt);
       renderer.render(scene, camera);

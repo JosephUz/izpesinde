@@ -1,6 +1,6 @@
 // Tarayıcı dumanı testi: çalışan sunucuya (GAME_URL, varsayılan http://127.0.0.1:5197) başsız Chromium ile bağlanır.
 // Menü, rol seçimi, yürüme, çift zıplama, görüş sisi, duraklatma, gerçek sol tıkla işaret / yakalama / kılık, kenar
-// uyarısı, E ile kutu, suçlunun Q ile kılığı ve sol tıkla öldürmesi, görüş alanındaki sabit nesnelerin saydamlığı, iz oku, skor tablosu, küçük ekran, beş turun ekran geçişleri ve gösteri kipi (?gosteri=son-takip) denetlenir.
+// uyarısı, E ile kutu, suçlunun Q ile kılığı ve sol tıkla öldürmesi, görüş alanındaki sabit nesnelerin saydamlığı, iz oku, skor tablosu, küçük ekran, beş turun ekran geçişleri ve gösteri kipleri (?gosteri=son-takip, ?gosteri=roller) denetlenir.
 // Ekran görüntüleri artifacts/ altına. Playwright yolu: PLAYWRIGHT_MODULE (npm test bunu kendisi bulur).
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -247,7 +247,35 @@ try {
   assert.deepEqual(gErrors, []);
   await gp.close();
 
-  console.log('Tarayıcı dumanı testi geçti: menü, rol seçimi, hareket, sis, sol tık eylemleri, kutu, saydamlık, iz oku, elenme sahneleri, beş tur, gösteri kipi.');
+  // Üç rol gösterisi (`?gosteri=roller`, bkz. src/gosteri-roller.js). Zamanlaması kural testinde ölçülür; burada
+  // tarayıcıya ait olan denetlenir: direktif yazısı kutusu doğar, HUD rolün gözünden okunur ve kamera role göre
+  // kendi karakterine bağlanır.
+  const rp = await browser.newPage({ viewport: { width: 1080, height: 1920 } }), rErrors = [];
+  rp.on('pageerror', e => rErrors.push(e.message));
+  rp.on('console', e => { if (e.type() === 'error') rErrors.push(e.text()); });
+  await rp.goto(url + '/?gosteri=roller&muzik=0');
+  await rp.waitForFunction(() => window.__gosteri);
+  assert.equal(await rp.locator('#menu').isVisible(), false, 'menü atlanır');
+  assert.equal(await rp.locator('#actionbar').isVisible(), false, 'girdi çubuğu gizli');
+  // Açılışta suçlunun gözündeyiz: rol kartı Suçlu yazar ve ilk direktif yazısı kutusu gelir.
+  await rp.waitForSelector('#iz-gosteri-yazi', { timeout: 6000 });
+  assert.equal(await rp.locator('#role').textContent(), 'Suçlu', 'HUD rolün gözünden okunur');
+  assert.match(await rp.locator('#iz-gosteri-yazi').textContent(), /SEN SUÇLUSUN/, 'ilk direktif yazısı ekranda');
+  const kutu = await rp.locator('#iz-gosteri-yazi').evaluate(el => {
+    const s = getComputedStyle(el), r = el.getBoundingClientRect();
+    return { yuvarlak: s.borderRadius, kalin: s.fontWeight, ortada: Math.abs(r.left + r.width / 2 - innerWidth / 2) < 2, ust: r.top / innerHeight };
+  });
+  assert.ok(kutu.ortada && kutu.ust > 0.18 && kutu.ust < 0.42, 'yazı kutusu ekranın ortasına yakın ve yatayda ortalı');
+  assert.equal(kutu.kalin, '900'); assert.equal(kutu.yuvarlak, '999px');
+  await rp.screenshot({ path: 'artifacts/gosteri-roller.png' });
+  // Savcının gözüne geçiş: rol kartı da kamera da savcıya döner (sahnenin 9,23. saniyesi).
+  await rp.waitForFunction(() => window.__gosteri.rol === 'prosecutor', null, { timeout: 20000, polling: 100 });
+  await rp.waitForTimeout(600);
+  assert.equal(await rp.locator('#role').textContent(), 'Savcı', 'rol değişince HUD da döner');
+  assert.deepEqual(rErrors, []);
+  await rp.close();
+
+  console.log('Tarayıcı dumanı testi geçti: menü, rol seçimi, hareket, sis, sol tık eylemleri, kutu, saydamlık, iz oku, elenme sahneleri, beş tur, iki gösteri kipi.');
 } finally {
   await browser.close();
 }

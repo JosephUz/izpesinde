@@ -16,6 +16,7 @@ import { finish } from '../src/score.js';
 import { traceEvery, traceLag } from '../src/traces.js';
 import { createWorld, spectate, startRound, step } from '../src/world.js';
 import { SON_TAKIP, createSonTakip } from '../src/gosteri.js';
+import { ROLLER, YAZILAR, createRoller } from '../src/gosteri-roller.js';
 
 const S = CFG.scores;
 const setup = (role = null) => {
@@ -341,4 +342,57 @@ test('Gösteri sahnesi (?gosteri=son-takip): durum kurulur, savcı izi sürer, y
   assert.ok(Math.abs(sonucAt - K.cozulme) < 0.1, `tur sonu ekranı ${K.cozulme} sn (${sonucAt})`);
   assert.equal(w.result.kind, 'capture');
   assert.equal(app.fate.kind, 'caught'); assert.equal(app.fate.id, suclu.id);
+});
+
+test('Üç rol gösterisi (?gosteri=roller): kamera rolleri dolaşır, kılık / işaret / yakalama müziğin saniyelerine düşer', () => {
+  const g = createRoller(null), w = g.world, K = ROLLER, I = K.isaret;
+  const savci = w.actors[K.savci], suclu = w.actors[K.suclu], dedektif = w.actors[K.dedektif];
+  const koru = REGIONS[2], pazar = REGIONS[0];
+  // Turun son 45 saniyesi: izler en sık aralıkta düşer (2 sn arayla, 1 sn geriden).
+  assert.equal(w.time, CFG.seconds - K.kalan);
+  assert.equal(traceEvery(w.time), 2); assert.equal(traceLag(w.time), 1);
+  assert.equal(counts(w), '2/6/2');
+  assert.deepEqual([suclu.role, savci.role, dedektif.role], ['criminal', 'prosecutor', 'detective']);
+  assert.equal(w.player, suclu, 'sahne suçlunun gözünden açılır');
+  assert.ok(dist(suclu, koru) < 20, 'suçlu kuzey korusunda başlar');
+  assert.ok(Math.abs(dist(savci, suclu) - K.ara) < 1.5, 'savcı takip arası kadar geride');
+  // Yol zaman çizelgesi oyunun yürüme hızını aşmamalı: aşarsa sahne saatten geri kalır ve müzikten kayar.
+  assert.ok(g.enHizli < CFG.walk, `yolun gereken hızı yürüme hızının altında (${g.enHizli.toFixed(2)} < ${CFG.walk})`);
+
+  const app = { fate: null };
+  const goz = [], yazilar = new Set();
+  let izGordu = 0, dedektifGordu = 0, kafesIner = null, tekYazi = true;
+  for (let i = 0; i < 30 * 37; i++) {
+    const time = i / 30;
+    step(w, 1 / 30, g.girdi(1 / 30));
+    g.sahne(app, time);
+    if (app.fate) app.fate.t = time - app.fate.at; // main.js fateUpdate'in yaptığı
+    const t = g.saniye;
+    goz.push(g.gozler().id);
+    if (g.yazi) yazilar.add(g.yazi);
+    if (YAZILAR.filter(([a, b]) => t >= a && t < b).length > 1) tekYazi = false;
+    if (t > I.savci && t < I.dedektif && w.traces.some(x => x.role === 'prosecutor' && dist(x, savci) < CFG.vision)) izGordu++;
+    if (t > I.dedektif && t < I.kovalama && sees(w, dedektif, suclu, CFG.markRange)) dedektifGordu++;
+    if (kafesIner === null && app.fate && app.fate.t > 0) kafesIner = t;
+  }
+  // Oyunun kendi kuralları işledi: kılık (Q), işaret (dedektifin sol tıkı), yakalama (savcının sol tıkı), kafes.
+  assert.ok(g.kilikDegisti, 'suçlu kılık değiştirir');
+  assert.ok(Math.abs(g.isaretAt - K.isaretleme) < 0.3, `dedektif ${K.isaretleme} sn'de işaretler (${g.isaretAt.toFixed(2)})`);
+  assert.ok(Math.abs(g.yakalamaAt - I.yakalama) < 0.25, `yakalama ${I.yakalama} sn (${g.yakalamaAt.toFixed(2)})`);
+  assert.ok(suclu.caught && !w.result, 'ikinci suçlu serbest kalır: tur kapanış sahnesinde bitmez');
+  assert.ok(kafesIner !== null && kafesIner < I.yakalama + 0.3, 'kafes yakalamanın hemen ardından inmeye başlar');
+  assert.equal(app.fate.kind, 'caught'); assert.equal(app.fate.id, suclu.id);
+  assert.ok(dist(suclu, pazar) < 16, 'yakalama pazar meydanında olur');
+  // Kamera sırayla suçlu → savcı → dedektif → savcı → (kafeste) suçlu.
+  const kare = sn => goz[Math.round(sn * 30)];
+  assert.deepEqual([kare(1), kare(12), kare(20), kare(27), kare(35)].map(id => w.actors[id].role),
+    ['criminal', 'prosecutor', 'detective', 'prosecutor', 'criminal'], 'kamera üç rolü sırayla dolaşır');
+  assert.ok(izGordu > 30 * 5, `savcı kendi gözünde izleri görür (${izGordu} kare)`);
+  assert.ok(dedektifGordu > 30 * 2, `dedektif şüpheliyi kendi gözünde görür (${dedektifGordu} kare)`);
+  // Yazılar: hepsi çıkar, aynı anda tek yazı görünür, her biri en az 1,5 sn kalır ve gerçek tuşları kullanır.
+  assert.equal(yazilar.size, YAZILAR.length, 'bütün direktif yazıları ekrana gelir');
+  assert.ok(tekYazi, 'aynı anda tek yazı görünür');
+  assert.ok(YAZILAR.every(([a, b]) => b - a >= 1.5), 'her yazı en az 1,5 sn kalır');
+  const tuslu = YAZILAR.map(([, , s]) => s).filter(s => /^(Sol tık|Q|SHIFT|E|F):/.test(s));
+  assert.ok(tuslu.length >= 4, 'yazılar oyunun gerçek tuşlarını kullanır');
 });

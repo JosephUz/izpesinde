@@ -9,3 +9,6 @@ burada duruyor. Oyunda çalmaz, web yayınına ve uygulamaya girmez (bkz. script
 yok (src/muzik.js SAHNELER boş, Müzik düğmesi gizli). Parçalar silinmedi, burada duruyor.
 
 © 2026 JosephUz. Tüm hakları saklıdır.
+
+8 Ekim 2026: Yusuf iz-2-pazar-meydani, iz-3-sucu-aramizda ve iz-5-dosyalar'ı oyunun müziği seçti; bu üçü
+arşivden muzik/ altına döndü. Kalanlar (iz-1, iz-4, iz-6) burada.

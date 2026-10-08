@@ -82,7 +82,7 @@ try {
   let d = await durum();
   console.log('menü:', JSON.stringify(d), JSON.stringify(await calan()));
   assert.equal(d.sahne, 'sakin', 'menüde sakin sahne');
-  assert.equal(d.parca, 'iz-6-gece-nobeti', 'menüde Pazar Meydanı çalmalı');
+  assert.equal(d.parca, 'iz-2-pazar-meydani', 'menüde Pazar Meydanı çalmalı');
   const menuSes = await calan();
   assert.ok(menuSes && menuSes.currentTime > 0, 'menü parçası gerçekten ilerlemeli');
   assert.ok(menuSes.loop, 'tek parçalı sakin sahne kendi kendine dönmeli');
@@ -116,7 +116,7 @@ try {
   assert.equal(d.parca, 'iz-5-dosyalar', 'tur başlayınca ana tema çalmalı');
   const turSes = (await sesler()).find(a => a.parca === 'iz-5-dosyalar');
   assert.ok(!turSes.paused && turSes.currentTime > 0, 'tur parçası çalıyor ve ilerliyor');
-  assert.ok((await sesler()).find(a => a.parca === 'iz-6-gece-nobeti').paused, 'sakin parça susmuş olmalı');
+  assert.ok((await sesler()).find(a => a.parca === 'iz-2-pazar-meydani').paused, 'sakin parça susmuş olmalı');
   assert.ok(d.ogeler === 2, `tur parçası ancak tur başlarken yüklenmeli (yüklenen: ${d.ogeler})`);
 
   // 4b) Turun son dakikasına girince gerilim parçası (Suçlu Aramızda) devralır; saat ileri alınarak ölçülür.
@@ -125,7 +125,7 @@ try {
   await page.waitForTimeout(2600);
   d = await durum();
   console.log('son dakika:', JSON.stringify(d));
-  assert.equal(d.parca, 'iz-4-sessiz-kasaba', 'turun son dakikasında gerilim parçası çalmalı');
+  assert.equal(d.parca, 'iz-3-sucu-aramizda', 'turun son dakikasında gerilim parçası çalmalı');
   assert.ok((await calan()).currentTime > 0, 'gerilim parçası ilerlemeli');
   // Saat geri alınır: testin kalanı normal tur müziğiyle sürsün, tur süre bitiminden kapanmasın.
   await page.evaluate(() => { window.__iz.world.time = 10; });
@@ -140,7 +140,7 @@ try {
   // Süzülerek susar (çapraz geçiş 1,8 sn; sahne değişimi üst üste geldiyse birkaç parça birden süzülüyor olabilir).
   await page.waitForFunction(() => [...document.querySelectorAll('audio')].every(a => a.paused), null, { timeout: 10000 });
   d = await durum();
-  const durduran = (await sesler()).find(a => a.parca === 'iz-6-gece-nobeti'); // mola → sakin sahne
+  const durduran = (await sesler()).find(a => a.parca === 'iz-2-pazar-meydani'); // mola → sakin sahne
   console.log('kapalı:', JSON.stringify(d), JSON.stringify(await sesler()));
   assert.equal(d.acik, false, 'müzik kapanmalı');
   assert.equal(d.caliyor, false, 'kapatınca hiçbir parça çalmamalı');

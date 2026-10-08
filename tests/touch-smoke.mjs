@@ -89,7 +89,8 @@ try {
   await tap(use.x, use.y);
   await page.waitForTimeout(150);
   // Bot dedektif hemen ardından işaretlerse bizimki kalkar (kasabada tek işaret): oyuncunun işaret olayına bakılır.
-  assert.ok(await game(() => window.__iz.world.marks.get(30)?.owner === 0 || window.__iz.world.events.some(e => e.to === 0 && e.text.startsWith('İşaret bırakıldı'))), 'büyük düğme seçili hedefi işaretler');
+  const durum = await game(() => { const w = window.__iz.world, p = w.player, n = w.actors[30]; return { ok: w.marks.get(30)?.owner === 0 || w.events.some(e => e.to === 0 && e.text.startsWith('İşaret bırakıldı')), marks: [...w.marks].map(([k, m]) => [k, m.owner]), alive: [p.alive, p.caught, n.alive], d: Math.hypot(p.x - n.x, p.z - n.z), target: window.__iz.app.target, ev: w.events.slice(-4).map(e => e.text), toast: document.querySelector('#toast')?.textContent, overlay: document.querySelector('#overlay').hidden, fate: document.querySelector('#fate')?.hidden, res: !!w.result }; });
+  assert.ok(durum.ok, 'büyük düğme seçili hedefi işaretler ' + JSON.stringify(durum));
 
   // Rol değişince düğme adı ve Kılık.
   await game(() => window.__iz.setRole('criminal'));

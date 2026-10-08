@@ -62,6 +62,22 @@ export async function start(root) {
    */
   const kip = gosteriKipi();
   const gosteri = kip === 'son-takip' ? createSonTakip() : kip === 'roller' ? createRoller(root) : null;
+  /**
+   * Otopilot (`?otopilot=1`, yalnız tarayıcı, tek başına): müzik videoları için kesintisiz **gerçek** maç (gösteri
+   * değil). Oyuncunun karakterini bir bot oynar (dünyada insan yok), menü, hazırlık, rol seçimi ve tur girişi
+   * atlanır. Tur bitince bitiş sahnesi ve tur sonu tablosu OTO_SONUC saniye görünür, sonra sıradaki tur kendiliğinden
+   * başlar; beşinci turdan sonra yeni maç. Kamera oyunun normal kamerasıdır (karakter elenince takım arkadaşı).
+   *  - `&rol=detective|prosecutor|criminal`: oyuncunun her turdaki rolü (yoksa her tur rastgele)
+   *  - `&ileri=200`: ilk tur ekrana gelmeden bu kadar saniye ileri sarılır (turun ortasından / sonundan çekmek için)
+   *  - `&tohum=7`: maçın tohumu (aynı tohum aynı kasaba, kalabalık ve rol dağılımı)
+   * Paperclip'in müzik videosu betiği bu kipi kullanır (paperclip/ajanlar/icerik/muzik-videosu.mjs, `window.__iz`).
+   */
+  const otoSorgu = new URLSearchParams(location.search);
+  const OTO_SONUC = 6;
+  const otopilot = otoSorgu.has('otopilot') && !gosteri ? {
+    rol: ['detective', 'prosecutor', 'criminal'].includes(otoSorgu.get('rol')) ? otoSorgu.get('rol') : null,
+    ileri: Math.max(0, Number(otoSorgu.get('ileri')) || 0), tohum: Number(otoSorgu.get('tohum')) || Date.now(), sonucAt: 0,
+  } : null;
   const app = { world: demo(), match: null, level: 'normal', playing: false, paused: false, choosing: false, shownResult: false, online: false, inLobby: false, spectator: 0, hover: null, target: null, touch, zoom: 25, w: innerWidth, h: innerHeight, left: 0, top: 0 };
   app.project = (x, y, z) => {
     const p = new T.Vector3(x, y, z).project(camera);
@@ -132,7 +148,7 @@ export async function start(root) {
       if (app.paused) screens.close(); else screens.pauseMenu();
     },
     tab: down => (down ? screens.scoreToggle(true) : ($('#scores').hidden = true)),
-    blur() { if (app.playing && !app.online && !app.paused && !app.world.result) screens.pauseMenu(); },
+    blur() { if (app.playing && !app.online && !app.paused && !app.world.result && !otopilot) screens.pauseMenu(); },
     use() { if (app.playing && !app.paused) ui.toast(touch ? 'Önce dünyada birine dokunarak seç.' : 'İmlecin altında kimse yok.'); },
     map() { if (app.playing) minimap.toggle(); },
     pinch(scale, start) { if (start) pinchFrom = app.zoomPlay; else setZoom(pinchFrom / scale, true); },
@@ -271,6 +287,23 @@ export async function start(root) {
     ui.update();
   }
 
+  // Otopilot: maç doğrudan başlar, oyuncunun karakterini bot oynar (bkz. yukarıdaki `otopilot`).
+  function otoTur() {
+    if (!app.match || app.match.round >= CFG.rounds) app.match = createWorld({ seed: app.match ? Date.now() : otopilot.tohum, level: 'normal', humans: [] });
+    hooks.pick(otopilot.rol);
+    screens.close();
+  }
+  if (otopilot) {
+    root.classList.add('otopilot');
+    document.body.classList.add('playing');
+    for (const id of ['#menu', '#scene-caption', '#menu-footer']) $(id).hidden = true;
+    $('#hud').hidden = false; $('#scores').hidden = true;
+    otoTur();
+    for (let t = 0; t < otopilot.ileri && !app.world.result; t += 0.05) step(app.world, 0.05);
+    focus.set(app.world.player.x, 0, app.world.player.z);
+    ui.update();
+  }
+
   // Çizim alanı pencereyi değil kökü doldurur: telefonda kök görünür alana kilitlidir (adres çubuğu, klavye).
   function resize() {
     const r = root.getBoundingClientRect();
@@ -403,6 +436,11 @@ export async function start(root) {
         if (endingUpdate(world, time)) { $('#fate').hidden = true; $('#ending').hidden = true; screens.showResult(); }
       }
       else if (!app.playing) menuStep(world, dt);
+      // Otopilot: tur sonu tablosu biraz görünür, sonra sıradaki tur kendiliğinden başlar.
+      if (otopilot && app.shownResult) {
+        otopilot.sonucAt ||= time;
+        if (time - otopilot.sonucAt > OTO_SONUC) { otopilot.sonucAt = 0; otoTur(); }
+      }
       input.pickHover();
       if (touch) syncTouch(world);
       if (!app.online && (!app.playing || app.paused)) { trackDowns(world, time); fateUpdate(world, time); }
@@ -454,7 +492,7 @@ export async function start(root) {
   // Gösteri çekimi sahnenin saatini ve yakalamanın olup olmadığını buradan okur (kare kare çekim betiği).
   if (gosteri) window.__gosteri = gosteri;
 
-  if (new URLSearchParams(location.search).has('test')) {
+  if (new URLSearchParams(location.search).has('test') || otopilot) {
     window.__iz = {
       get world() { return app.world; }, get app() { return { ...app, fogNear: () => scene.fog.near }; }, renderer, characters, town,
       finish: (kind = 'timeout') => finish(app.world, kind),

@@ -70,19 +70,24 @@ iner (`←` `🔊` `♫` `?`), sıra ve düğmeler aynı kalır. Yerleşimi `tes
 
 ## Müzik
 
-**Şu an oyunda müzik yok** (4 Ekim 2026): sakin sürümler birbirine çok benzer ve konuya uymuyor bulundu, bu oyunun
-müziği sonra yeniden yapılacak. Parçalar silinmedi, `muzik/archive/` altında (bkz. `muzik/archive/NOT.txt`; yayına
-girmez). `src/muzik.js` → `SAHNELER` listeleri boş: hiçbir dosya istenmez, `Müzik` düğmesi üst çubukta ve Esc
-menüsünde gizlidir (`parcaVar` / `MUZIK_VAR`). Listelere parça eklenince düğme kendiliğinden döner; müzik testleri
-parça yokken çalma ölçümünü atlar ("müzik yok: atlandı"). Aşağıdaki düzen eski parçalarla kuruluydu:
+Yusuf 8 Ekim 2026: oyunun müziği aşağıdaki üç parça (josephuz.com Müzik sekmesinde de bunlar). Öbür parçalar
+`muzik/archive/` altında durur (bkz. `muzik/archive/NOT.txt`), yayına girmez.
 
 Üç parça, `muzik/` altında (128 kbps mp3; beste JosephUz, örnekler VSCO 2 CE / CC0 — `muzik/LISANS.txt`):
-**Pazar Meydanı** sakin (menü, hazırlık, lobi, rol seçimi, tur girişi, mola, sonuç), **Gizem** tur sırasında,
+**Pazar Meydanı** sakin (menü, hazırlık, lobi, rol seçimi, tur girişi, mola, sonuç), **Dosyalar** tur sırasında,
 **Suçlu Aramızda** turun son 60 saniyesinde ya da savcının kovalamacasında (ana temayla sırayla). Sahne seçimi saf bir
 işlevdir (`src/muzik.js` → `sahneSec`); çalma `<audio>` öğeleriyle, 1,8 sn çapraz geçişle olur. Düzey efektlerin
 altındadır (varsayılan %35), ilk kullanıcı dokunuşundan sonra başlar, sekme gizlenince durur. Tur parçası ancak tur
 başlarken iner. Otomatik tarayıcıda (`navigator.webdriver`) müzik hiç kurulmaz — `?muzik=1` açar, `?muzik=0` kapatır.
 Testler: `tests/muzik.test.mjs` (tarayıcısız sahne kuralı), `tests/muzik-smoke.mjs` (gerçek tarayıcıda ölçüm).
+
+## Otopilot (müzik videoları)
+
+`?otopilot=1`: kesintisiz **gerçek** maç, oyuncunun karakterini bir bot oynar (dünyada insan yok). Menü, hazırlık, rol
+seçimi ve tur girişi atlanır; tur bitince bitiş sahnesi ve tablo ~6 sn görünür, sıradaki tur kendiliğinden başlar.
+`&rol=detective|prosecutor|criminal` her turdaki rolü sabitler, `&ileri=200` ilk turu ekrana gelmeden 200 sn ileri
+sarar, `&tohum=7` maçın tohumudur. Paperclip'in müzik videosu betiği (`paperclip/ajanlar/icerik/muzik-videosu.mjs`) bu
+kipi `?otopilot=1&muzik=0` ile açar ve `window.__iz`'e bakar.
 
 ## Telefon ve tablet
 

@@ -105,7 +105,7 @@ test('parça yoksa Müzik düğmesi (üst çubuk + Esc menüsü) gizlenir', () =
 test('her parça ve lisans dosyası yerinde', () => {
   // Şu an oyunda müzik yok (src/muzik.js SAHNELER boş): parçalar muzik/archive/ altında durur, yalnız lisans denetlenir.
   if (!MUZIK_VAR) console.log('müzik yok: parça dosyası denetimi atlandı');
-  const parcalar = MUZIK_VAR ? ['iz-5-dosyalar.mp3', 'iz-6-gece-nobeti.mp3', 'iz-4-sessiz-kasaba.mp3'] : [];
+  const parcalar = MUZIK_VAR ? ['iz-5-dosyalar.mp3', 'iz-2-pazar-meydani.mp3', 'iz-3-sucu-aramizda.mp3'] : [];
   for (const f of [...parcalar, 'LISANS.txt']) {
     const boy = readFileSync(path.join(root, 'muzik', f)).length;
     assert.ok(boy > 0, `muzik/${f} olmalı`);

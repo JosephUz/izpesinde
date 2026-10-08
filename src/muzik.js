@@ -1,10 +1,9 @@
 /**
- * Oyun içi müzik: üç sahne, çapraz geçiş. **Şu an parça yok** (4 Ekim 2026; bkz. SAHNELER): aşağıdaki sahne düzeni
- * eski parçaların adlarıyla anlatılır, yeni parçalar gelince aynı düzen kullanılır.
- *  - **sakin** (`Gece Nöbeti`): ana menü, hazırlık, çevrim içi oda / koltuk bekleme, rol seçimi, tur girişi, mola,
+ * Oyun içi müzik: üç sahne, çapraz geçiş (Yusuf 8 Ekim 2026: Pazar Meydanı, Dosyalar, Suçlu Aramızda).
+ *  - **sakin** (`Pazar Meydanı`): ana menü, hazırlık, çevrim içi oda / koltuk bekleme, rol seçimi, tur girişi, mola,
  *    tur ve maç sonu — tek parça, kendi kendine döner.
  *  - **mac** (`Dosyalar`): tur sürerken ana tema.
- *  - **gerilim** (`Sessiz Kasaba` ↔ `Dosyalar`): turun son 60 saniyesi ya da savcının kovalamacası (ekran kenarında
+ *  - **gerilim** (`Suçlu Aramızda` ↔ `Dosyalar`): turun son 60 saniyesi ya da savcının kovalamacası (ekran kenarında
  *    işaret okları görünürken). Parça bitince ana temaya, o da bitince yeniden gerilime döner; araya sessizlik girmez.
  *
  * Çalma `<audio>` öğeleriyledir (Web Audio gerekmez): dosya akarak iner, sahne değişince ses düzeyi karşılıklı
@@ -19,15 +18,13 @@
  * Dosya yolları **görelidir** (`muzik/...`): aynı dosyalar Capacitor'ın `https://localhost/` kökünde de çalışır
  * (bkz. scripts/build-web.mjs).
  */
-// ŞU AN OYUNDA MÜZİK YOK (Yusuf 4 Ekim 2026: "diğer oyunlardaki müzikleri şimdilik kaldıralım"). Sakin sürümler
-// birbirine çok benzer ve konuya uymuyor bulundu; parçalar silinmedi, muzik/archive/ altında (bkz. NOT.txt). Bu
-// oyunun müziği sonra yeniden yapılacak. Listeler boşken hiçbir dosya istenmez, hiçbir şey çalmaz ve Müzik düğmesi
-// (üst çubuk + Esc menüsü) gizlenir (main.js `parcaVar`). Yeni parçalar buraya eklenince düğme kendiliğinden döner.
-// Eski düzen: sakin ['iz-6-gece-nobeti'], mac ['iz-5-dosyalar'], gerilim ['iz-4-sessiz-kasaba', 'iz-5-dosyalar'].
+// Yusuf 8 Ekim 2026: oyunun müziği bu üç parça (josephuz.com Müzik sekmesinde de bunlar). Öbür parçalar
+// muzik/archive/ altında (bkz. NOT.txt), yayına girmez. Listeler boş kalırsa hiçbir dosya istenmez, hiçbir şey
+// çalmaz ve Müzik düğmesi (üst çubuk + Esc menüsü) gizlenir (main.js `parcaVar`).
 const SAHNELER = {
-  sakin: [],
-  mac: [],
-  gerilim: [],
+  sakin: ['iz-2-pazar-meydani'],
+  mac: ['iz-5-dosyalar'],
+  gerilim: ['iz-3-sucu-aramizda', 'iz-5-dosyalar'],
 };
 /** Çalınacak en az bir parça var mı? Yoksa müzik hiç kurulmaz, düğmesi de gösterilmez. */
 export const MUZIK_VAR = Object.values(SAHNELER).some(liste => liste.length > 0);

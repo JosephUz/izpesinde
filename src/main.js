@@ -27,7 +27,7 @@ import { createWorld, spectate, startRound, step } from './world.js';
  * İstemci uygulaması: sahne, kamera, arayüz, ekranlar ve oyun akışı.
  *  - **Tek başına**: simülasyon (world.js) bu tarayıcıda koşar. Menü (arka planda kendi kendine dolaşan bir kasaba) →
  *    her tur rol seçimi → tur girişi → oyun → tur sonu → … beşinci turun sonunda maç sonu.
- *  - **Çevrim içi**: oda kur / katıl → lobi (10 koltuk, taraf yok) → kuran başlatır. Simülasyon sunucuda koşar, istemci
+ *  - **Çevrim içi**: hızlı katıl / açık odalardan seç / oda kur (herkese açık ya da özel) / kodla katıl → lobi (10 koltuk, taraf yok) → kuran başlatır. Simülasyon sunucuda koşar, istemci
  *    (net/client.js) dünyanın kopyasını çizer. Rol seçimi yoktur, her tur rastgele; turlar sunucunun saatiyle akar.
  *    Sunucuya bağlanılamadıkça oda düğmeleri "Yakında" yazar; tek başına oyun aynen oynanır. Her karede: (adım) → görünüm eşitleme → arayüz → kamera → çizim.
  * `?test` adresinde testler için window.__iz açılır; normal oyunda gizli durum pencereye çıkmaz.
@@ -118,6 +118,7 @@ export async function start(root) {
     // Çevrim içi lobi ve tur akışı (sunucuya gider).
     seat: seat => net.seat(seat),
     level: level => net.settings(level),
+    privacy: priv => net.privacy(priv),
     startRoom: () => net.start(),
     leaveRoom() { net.leave(); app.inLobby = false; $('#overlay').hidden = true; showMenu(true); },
     /** Maç sonu tablosundan lobiye: kopya dünya bırakılır, arkada yine menünün kasabası dolaşır. */
@@ -143,7 +144,7 @@ export async function start(root) {
     escape() {
       // Rol seçilmeden tur başlamaz: seçim ekranı (ilk turda maç henüz başlamamışken de) Esc ile kapanmaz. Lobi de kapanmaz.
       if (app.choosing || app.inLobby) return;
-      if (!app.playing) { $('#overlay').hidden = true; return; }
+      if (!app.playing) { if (roomsOpen) closeRooms(); $('#overlay').hidden = true; return; }
       if (app.world.result) return;
       if (app.paused) screens.close(); else screens.pauseMenu();
     },
@@ -160,7 +161,8 @@ export async function start(root) {
 
   // ---------- Çevrim içi ----------
   const networked = onlineEnabled();
-  let pendingRoom = null;
+  let pendingRoom = null, roomsOpen = false;
+  const ONLINE_BUTTONS = ['#create', '#join', '#quick', '#rooms'];
   const nick = () => { const v = $('#nick').value.trim().slice(0, 16); try { localStorage.setItem('iz.nick', v); } catch { /* yok */ } return v; };
   // Ad hatırlanır; ilk girişte hazır bir adla gelir (boş adla odaya girilmez).
   try { $('#nick').value = localStorage.getItem('iz.nick') || ''; } catch { /* yok */ }
@@ -169,15 +171,22 @@ export async function start(root) {
     for (const id of ['#menu', '#scene-caption', '#menu-footer']) $(id).hidden = !on;
     document.body.classList.toggle('playing', !on && app.playing);
   }
-  function openLobby(l, error = '') { app.inLobby = true; showMenu(false); screens.lobby(l, net.id, error); }
+  function openLobby(l, error = '') { roomsOpen = false; app.inLobby = true; showMenu(false); screens.lobby(l, net.id, error); }
   function setServer(on) {
-    for (const id of ['#create', '#join']) { const b = $(id); b.disabled = !on; b.textContent = on ? b.dataset.label : 'YAKINDA'; }
+    for (const id of ONLINE_BUTTONS) { const b = $(id); b.disabled = !on; b.textContent = on ? b.dataset.label : 'YAKINDA'; }
     if (!on) $('#join-row').hidden = true;
+    roomsLabel();
+  }
+  /** Açık odalar düğmesi katılınabilen herkese açık oda sayısını da gösterir (sunucu ONLINE ile yollar). */
+  function roomsLabel() {
+    const b = $('#rooms');
+    if (!b.disabled) b.textContent = net.open > 0 ? `${b.dataset.label} · ${net.open}` : b.dataset.label;
   }
   const net = createNetClient({
     onWelcome() {
       const r = pendingRoom; pendingRoom = null;
-      if (r?.create) net.create(app.level);
+      if (r?.create) net.create(app.level, Boolean(r.priv));
+      else if (r?.quick) net.quick(app.level);
       else if (r?.code) net.join(r.code);
       // Sayfa yenilendi: sunucu oyundaki koltuğu token'la kendisi geri verir; lobideyse koda yeniden katılınır.
       else if (net.rememberedRoom()) { const code = net.rememberedRoom(); setTimeout(() => { if (!net.lobby && !net.world) net.join(code); }, 400); }
@@ -192,9 +201,10 @@ export async function start(root) {
       if (app.inLobby && net.lobby) openLobby(net.lobby, msg);
       else { ui.toast(msg); net.forgetRoom(); }
     },
-    onOnline(n) { $('#online').textContent = n > 0 ? `● ${n} çevrim içi` : ''; },
-    onConnect() { setServer(true); },
-    onDisconnect() { setServer(false); $('#online').textContent = ''; },
+    onOnline(n) { $('#online').textContent = n > 0 ? `● ${n} çevrim içi` : ''; roomsLabel(); },
+    onRooms(list) { if (roomsOpen) screens.roomList(list, true); },
+    onConnect() { setServer(true); if (roomsOpen) { net.watchRooms(true); screens.roomList(null, true); } },
+    onDisconnect() { setServer(false); $('#online').textContent = ''; if (roomsOpen) screens.roomList(null, false); },
   });
   /** Çevrim içi tur başladı (ya da geri bağlanınca sürüyor): kopya dünya çizilir, rol girişi açılır. */
   function enterOnline(world) {
@@ -218,8 +228,24 @@ export async function start(root) {
     pendingRoom = room;
     if (net.connected) net.hello(name); else net.connect(name);
   };
-  for (const id of ['#create', '#join']) $(id).dataset.label = $(id).textContent;
-  $('#create').onclick = () => { if (!nick()) { goOnline({}); return; } screens.setup('room', level => { app.level = level; goOnline({ create: true }); }); };
+  for (const id of ONLINE_BUTTONS) $(id).dataset.label = $(id).textContent;
+  const createRoom = () => { if (!nick()) { goOnline({}); return; } screens.setup('room', (level, priv) => { app.level = level; goOnline({ create: true, priv }); }); };
+  $('#create').onclick = createRoom;
+  // Hızlı katıl: sunucu en dolu açık odaya oturtur, yoksa bu oyuncuyla yeni herkese açık oda kurar (zorluk son seçilen).
+  $('#quick').onclick = () => goOnline({ quick: true });
+  /** Açık odalar penceresi: açıkken sunucu listeyi değiştikçe yollar; kapanınca izleme bırakılır. */
+  function openRooms() {
+    roomsOpen = true;
+    screens.rooms(null, net.connected, {
+      quick: () => goOnline({ quick: true }),
+      join: code => goOnline({ code }),
+      create: () => { closeRooms(); createRoom(); },
+      close: closeRooms,
+    });
+    if (net.connected) net.watchRooms(true);
+  }
+  function closeRooms() { if (!roomsOpen) return; roomsOpen = false; net.watchRooms(false); $('#overlay').hidden = true; }
+  $('#rooms').onclick = openRooms;
   $('#join').onclick = () => { $('#join-row').hidden = false; $('#code').focus(); };
   const joinCode = () => { const code = $('#code').value.trim().toUpperCase(); if (code) goOnline({ code }); };
   $('#joinGo').onclick = joinCode;
@@ -230,7 +256,7 @@ export async function start(root) {
     const linked = new URLSearchParams(location.search).get('oda');
     if (linked) { $('#join-row').hidden = false; $('#code').value = linked.toUpperCase(); }
     net.connect(nick() || 'İzci');
-  } else for (const id of ['#create', '#join']) $(id).hidden = true;
+  } else for (const id of ONLINE_BUTTONS) $(id).hidden = true;
   $('#helpBtn').onclick = () => screens.help();
   $('#pauseBtn').onclick = () => screens.pauseMenu();
   $('#sound').onclick = () => hooks.toggleSound();

@@ -185,3 +185,15 @@ body.playing #iz-game.touch #toptools,body.playing #iz-game.touch #brand,#iz-gam
 @keyframes endTitle{from{opacity:0;letter-spacing:22px;filter:blur(6px)}to{opacity:1;letter-spacing:2px;filter:none}}
 @media(max-height:500px){#ending{top:8%}#ending h2{font-size:30px;margin:4px 0 6px}#ending p{font-size:13px}}
 @media(prefers-reduced-motion:reduce){#ending *{animation-duration:.01s!important;animation-delay:0s!important}}
+/* Açık odalar: ana menüde Hızlı katıl / Açık odalar satırı, açık odalar penceresi, odanın görünürlüğü (herkese açık / özel). */
+#online-row{width:min(470px,100%)}#online-row .secondary{white-space:nowrap;letter-spacing:1.5px}
+.room-list{display:flex;flex-direction:column;gap:6px;margin:16px 0 4px;max-height:min(300px,40vh);overflow-y:auto}
+.room-row{display:flex;align-items:center;gap:14px;padding:10px 12px 10px 16px;background:#102620b0;border:1px solid var(--line)}
+.room-name{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.room-name b{font:16px Georgia,serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.room-name small{font-size:10px;color:var(--muted);letter-spacing:.4px}
+.room-count{font-size:11px;color:var(--muted);white-space:nowrap}.room-count b{font:18px Georgia,serif;color:var(--gold)}
+.room-row .secondary{padding:10px 14px;letter-spacing:1.5px;white-space:nowrap;border-color:#d8b57480;color:var(--gold)}.room-row .secondary:disabled{opacity:.5;cursor:default;filter:none;color:var(--muted)}
+.room-empty{padding:18px 16px;border:1px dashed var(--line);font-size:12px;color:var(--muted);text-align:center}
+.dialog p.privacy-note{font-size:11px;line-height:1.6;color:var(--muted);margin:6px 0 0}.dialog .buttons button:disabled{opacity:.55;cursor:default;filter:none}
+.lobby-opts{display:flex;gap:16px;flex-wrap:wrap}.lobby-opts>div{flex:1;min-width:200px}.lobby-opts .lobby-levels{width:100%}.setup-privacy{margin-top:10px}
+@media (max-width:480px){.room-row{gap:8px;padding:8px 8px 8px 12px}.room-name b{font-size:14px}.room-row .secondary{padding:9px 10px}.dialog .buttons{flex-wrap:wrap}}
+@media (max-height:500px){#home-buttons{flex-wrap:nowrap}#home-buttons #start{flex-basis:auto}#home-buttons .secondary,#online-row .secondary{padding:12px 14px}#online-row{margin-top:6px}}

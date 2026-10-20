@@ -166,6 +166,9 @@ Puanlar tur boyunca birikir, tur sonunda tek kez skora eklenir.
 ## 16. Çevrim içi oda
 
 - **Oda kur / Odaya katıl**: ad yazılır, oda kurulunca 5 karakterlik bir kod (ve `?oda=KOD` linki) çıkar. Hesap yoktur.
+- **Herkese açık / özel oda**: oda kurulurken seçilir (varsayılan herkese açık); kuran lobide değiştirebilir. Özel oda listede ve Hızlı katıl'da görünmez, yalnızca kodla ya da linkle katılınır.
+- **Açık odalar**: ana menüdeki pencere, başlamayı bekleyen (lobideki) ve boş koltuğu olan herkese açık odaları listeler: kuranın adı, botların zorluğu, "n/10" ve **KATIL** (kod gerekmez). Pencere açıkken liste odalar değiştikçe kendiliğinden yenilenir; düğme açık oda sayısını gösterir. Oyunu başlamış odaya katılınmaz (tur arasında da), maç bitip oda lobiye dönünce yeniden listelenir. Listede yalnızca bu bilgiler vardır; rol, skor ya da tur bilgisi yoktur.
+- **Hızlı katıl**: en dolu açık odaya oturur (eşitse en eski); uygun oda yoksa o oyuncunun kurduğu yeni bir herkese açık oda açılır (zorluk son seçilen).
 - **Lobi**: 10 koltuk, taraf yok. Gelen ilk boş koltuğa oturur; boş bir koltuğa tıklayan oraya geçer. Boş koltukları botlar doldurur (koltuğun bot adıyla). Botların zorluğunu ve **Başlat**'ı yalnızca kuran seçer; "hazır" yoktur.
 - **Roller**: her tur herkese rastgele; tanıma kuralı aynıdır (suçlular birbirini, kanun savcıları tanır).
 - **Tur akışı** sunucunun saatiyle: giriş (6 sn) → oyun (6 dk) → tur sonu (16 sn: önce ~4 sn bitiş sahnesi, sonra tablo, roller açılır) → sonraki tur. Beşinci turdan sonra oda lobiye döner; aynı oyuncularla yeni maç başlatılabilir.

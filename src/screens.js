@@ -160,9 +160,12 @@ export function createScreens(root, app, hooks) {
       : `<button class="seat bot" data-seat="${i}" title="Bu koltuğa geç"><small>${i + 1}</small><b>${BOT_NAMES[i]}</b><span>Bot · boş koltuk</span></button>`;
     const levels = Object.entries(LEVELS).map(([k, v]) => `<button data-lobby-level="${k}" class="${k === l.level ? 'selected' : ''}" ${host ? '' : 'disabled'}>${v.label}</button>`).join('');
     const humans = l.seats.filter(Boolean).length;
-    show(`<span class="eyebrow">ÇEVRİM İÇİ ODA · KOD</span><h2 class="room-code">${l.code}</h2><p>Taraf yok: herkes her tur rastgele rol alır. Boş koltuklara bot oturur; boş bir koltuğa tıklayıp oraya geçebilirsin.</p><div class="seats">${l.seats.map(seat).join('')}</div><span class="eyebrow">BOTLARIN ZORLUĞU</span><div class="lobby-levels">${levels}</div>${error ? `<p class="lobby-error">${esc(error)}</p>` : ''}<p class="result-note">${humans} insan · ${10 - humans} bot · beş tur</p><div class="buttons">${host ? '<button class="primary" id="roomStart">BAŞLAT →</button>' : '<button class="primary" disabled>KURANIN BAŞLATMASI BEKLENİYOR</button>'}<button class="secondary" id="roomLink">Linki kopyala</button><button class="secondary" id="roomLeave">Ayrıl</button></div>`, "lobi");
+    const privacy = [[false, 'Herkese açık'], [true, 'Özel']].map(([v, t]) => `<button data-lobby-private="${v ? 1 : 0}" class="${Boolean(l.private) === v ? 'selected' : ''}" ${host ? '' : 'disabled'}>${t}</button>`).join('');
+    const privacyNote = l.private ? 'Özel oda: açık odalar listesinde görünmez, yalnızca kodla ya da linkle katılınır.' : "Herkese açık: oyun başlayana kadar açık odalar listesinde ve Hızlı katıl'da görünür.";
+    show(`<span class="eyebrow">ÇEVRİM İÇİ ODA · ${l.private ? 'ÖZEL · ' : ''}KOD</span><h2 class="room-code">${l.code}</h2><p>Taraf yok: herkes her tur rastgele rol alır. Boş koltuklara bot oturur; boş bir koltuğa tıklayıp oraya geçebilirsin.</p><div class="seats">${l.seats.map(seat).join('')}</div><div class="lobby-opts"><div><span class="eyebrow">BOTLARIN ZORLUĞU</span><div class="lobby-levels">${levels}</div></div><div><span class="eyebrow">ODA</span><div class="lobby-levels">${privacy}</div></div></div><p class="privacy-note">${privacyNote}</p>${error ? `<p class="lobby-error">${esc(error)}</p>` : ''}<p class="result-note">${humans} insan · ${10 - humans} bot · beş tur</p><div class="buttons">${host ? '<button class="primary" id="roomStart">BAŞLAT →</button>' : '<button class="primary" disabled>KURANIN BAŞLATMASI BEKLENİYOR</button>'}<button class="secondary" id="roomLink">Linki kopyala</button><button class="secondary" id="roomLeave">Ayrıl</button></div>`, "lobi");
     overlay.querySelectorAll('[data-seat]').forEach(b => { b.onclick = () => hooks.seat(Number(b.dataset.seat)); });
     overlay.querySelectorAll('[data-lobby-level]').forEach(b => { b.onclick = () => hooks.level(b.dataset.lobbyLevel); });
+    overlay.querySelectorAll('[data-lobby-private]').forEach(b => { b.onclick = () => hooks.privacy(b.dataset.lobbyPrivate === '1'); });
     if (host) $('#roomStart').onclick = () => hooks.startRoom();
     $('#roomLink').onclick = () => { navigator.clipboard?.writeText(link).then(() => { $('#roomLink').textContent = 'Kopyalandı'; }, () => { $('#roomLink').textContent = link; }); };
     $('#roomLeave').onclick = () => hooks.leaveRoom();
@@ -177,17 +180,54 @@ export function createScreens(root, app, hooks) {
     try { level = localStorage.getItem('iz.level') || 'normal'; } catch { /* yok */ }
     if (!LEVELS[level]) level = 'normal';
     const pick = Object.entries(LEVELS).map(([k, v]) => `<button data-setup-level="${k}" class="${k === level ? 'selected' : ''}">${v.label}</button>`).join('');
-    show(`<span class="eyebrow">${kind === 'room' ? 'ÇEVRİM İÇİ ODA' : 'TEK BAŞINA · 9 BOT'}</span><h2>${kind === 'room' ? 'Oda kur' : 'Kasabaya hazırlan'}</h2><p>${kind === 'room' ? 'Boş koltukları botlar doldurur; zorluğu lobide de değiştirebilirsin. Taraf yok, roller her tur rastgele.' : 'Rolünü her tur sen seçersin; kalan rolleri botlar paylaşır. Beş tur, en yüksek kişisel skor kazanır.'}</p><span class="eyebrow">BOTLARIN ZORLUĞU</span><div class="lobby-levels setup-levels">${pick}</div><div class="buttons"><button class="primary" id="setupGo">${kind === 'room' ? 'ODAYI KUR' : 'KASABAYA GİR'} →</button><button class="secondary" id="setupBack">Geri</button></div>`, "hazirlik");
+    // Oda kur: herkese açık (varsayılan; açık odalar listesinde ve Hızlı katıl'da görünür) ya da özel (yalnız kodla).
+    let priv = false;
+    const privacyNote = p => (p ? 'Özel oda listede görünmez; yalnızca kodu ya da linki olan katılır.' : "Herkese açık oda, oyun başlayana kadar açık odalar listesinde ve Hızlı katıl'da görünür.");
+    const privacy = kind === 'room' ? `<span class="eyebrow">ODA</span><div class="lobby-levels setup-privacy"><button data-setup-private="0" class="selected">Herkese açık</button><button data-setup-private="1">Özel</button></div><p class="privacy-note" id="setupPrivacyNote">${privacyNote(false)}</p>` : '';
+    show(`<span class="eyebrow">${kind === 'room' ? 'ÇEVRİM İÇİ ODA' : 'TEK BAŞINA · 9 BOT'}</span><h2>${kind === 'room' ? 'Oda kur' : 'Kasabaya hazırlan'}</h2><p>${kind === 'room' ? 'Boş koltukları botlar doldurur; zorluğu lobide de değiştirebilirsin. Taraf yok, roller her tur rastgele.' : 'Rolünü her tur sen seçersin; kalan rolleri botlar paylaşır. Beş tur, en yüksek kişisel skor kazanır.'}</p><span class="eyebrow">BOTLARIN ZORLUĞU</span><div class="lobby-levels setup-levels">${pick}</div>${privacy}<div class="buttons"><button class="primary" id="setupGo">${kind === 'room' ? 'ODAYI KUR' : 'KASABAYA GİR'} →</button><button class="secondary" id="setupBack">Geri</button></div>`, "hazirlik");
     overlay.querySelectorAll('[data-setup-level]').forEach(b => {
       b.onclick = () => { level = b.dataset.setupLevel; overlay.querySelectorAll('[data-setup-level]').forEach(x => x.classList.toggle('selected', x === b)); };
     });
-    $('#setupGo').onclick = () => { try { localStorage.setItem('iz.level', level); } catch { /* yok */ } overlay.hidden = true; go(level); };
+    overlay.querySelectorAll('[data-setup-private]').forEach(b => {
+      b.onclick = () => {
+        priv = b.dataset.setupPrivate === '1';
+        overlay.querySelectorAll('[data-setup-private]').forEach(x => x.classList.toggle('selected', x === b));
+        $('#setupPrivacyNote').textContent = privacyNote(priv);
+      };
+    });
+    $('#setupGo').onclick = () => { try { localStorage.setItem('iz.level', level); } catch { /* yok */ } overlay.hidden = true; go(level, priv); };
     $('#setupBack').onclick = () => { overlay.hidden = true; };
     $('#setupGo').focus();
   }
 
+  /**
+   * Açık odalar (ana menüden): başlamayı bekleyen, boş koltuğu olan herkese açık odalar; her satırda kuran, zorluk,
+   * "n/10" ve KATIL. Liste açıkken sunucu değiştikçe yollar, yalnızca liste kısmı yeniden yazılır (roomList).
+   * `rooms` null ise henüz gelmedi; `connected` yanlışsa sunucu yok. Esc ya da Geri pencereyi kapatır.
+   */
+  function rooms(list, connected, on) {
+    show(`<span class="eyebrow">ÇEVRİM İÇİ · AÇIK ODALAR</span><h2>Açık odalar</h2><p>Başlamayı bekleyen herkese açık odalar. Boş koltukları botlar doldurur, roller her tur rastgele.</p><div id="roomList" class="room-list" aria-live="polite"></div><p class="privacy-note">Oyunu başlamış odalara katılınmaz; maç bitip oda lobiye dönünce yeniden listelenir. Özel odalar burada görünmez, kodla katılınır.</p><div class="buttons"><button class="primary" id="roomsQuick">HIZLI KATIL →</button><button class="secondary" id="roomsCreate">Oda kur</button><button class="secondary" id="roomsBack">Geri</button></div>`, 'odalar');
+    $('#roomsQuick').onclick = () => on.quick();
+    $('#roomsCreate').onclick = () => on.create();
+    $('#roomsBack').onclick = () => on.close();
+    $('#roomList').onclick = e => { const b = e.target.closest('[data-room]'); if (b && !b.disabled) on.join(b.dataset.room); };
+    roomList(list, connected);
+  }
+  function roomList(list, connected) {
+    const box = $('#roomList'); if (!box || overlay.hidden) return;
+    $('#roomsQuick').disabled = !connected;
+    $('#roomsCreate').disabled = !connected;
+    if (!connected) { box.innerHTML = '<div class="room-empty">Sunucuya bağlanılamıyor. Biraz sonra yeniden dene; tek başına oyun açık.</div>'; return; }
+    if (!list) { box.innerHTML = '<div class="room-empty">Odalar yükleniyor…</div>'; return; }
+    if (!list.length) { box.innerHTML = '<div class="room-empty">Şu an açık oda yok. Hızlı katıl yeni bir oda kurar.</div>'; return; }
+    box.innerHTML = list.map(r => {
+      const full = r.n >= 10;
+      return `<div class="room-row"><div class="room-name"><b>${esc(r.host || 'Adsız oda')}</b><small>Kuran · ${LEVELS[r.level]?.label || 'Normal'} botlar · bekliyor</small></div><span class="room-count"><b>${r.n}</b>/10</span><button class="secondary" data-room="${esc(r.code)}" ${full ? 'disabled' : ''}>${full ? 'DOLU' : 'KATIL →'}</button></div>`;
+    }).join('');
+  }
+
   return {
-    roleChoice, roundIntro, help, pauseMenu, showResult, scoreToggle, close, lobby, tickOnline, setup,
+    roleChoice, roundIntro, help, pauseMenu, showResult, scoreToggle, close, lobby, tickOnline, setup, rooms, roomList,
     get open() { return !overlay.hidden; },
     /** Açık pencerenin adı (kapalıysa null); müziğin sahnesi buna bakar (src/muzik.js sahneSec). */
     get perde() { return overlay.hidden ? null : perdeAd; },

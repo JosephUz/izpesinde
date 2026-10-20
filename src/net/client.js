@@ -20,7 +20,7 @@ export function createNetClient(hooks) {
   let snaps = [], clockOffset = 0, clockReady = false, stateAt = 0, rtt = 0, pingClock = 0;
   let sendClock = 0, lastSent = '', resendClock = 0;
   const lead = { x: 0, z: 0 };
-  const client = { id: 0, nick: '', lobby: null, online: 0, connected: false, world: null, rtt: 0 };
+  const client = { id: 0, nick: '', lobby: null, online: 0, open: 0, rooms: null, connected: false, world: null, rtt: 0 };
 
   // Kimlik ve oda **sekmeye** özeldir (sessionStorage): iki sekme iki ayrı oyuncudur, sayfa yenilemesi aynı koltuğa
   // geri döner. Ad kalıcıdır (localStorage, bkz. screens.js).
@@ -57,7 +57,8 @@ export function createNetClient(hooks) {
       case S2C.STATE: applyState(msg); break;
       case S2C.RESULT: applyResult(msg); break;
       case S2C.PONG: rtt = performance.now() - msg.at; client.rtt = rtt; break;
-      case S2C.ONLINE: client.online = msg.n; hooks.onOnline?.(msg.n); break;
+      case S2C.ONLINE: client.online = msg.n; client.open = msg.open || 0; hooks.onOnline?.(msg.n, client.open); break;
+      case S2C.ROOMS: client.rooms = msg.rooms; hooks.onRooms?.(msg.rooms); break;
       default: break;
     }
   }
@@ -182,10 +183,14 @@ export function createNetClient(hooks) {
   return Object.assign(client, {
     connect,
     hello(nick) { curNick = nick; send({ t: C2S.HELLO, nick, token: token() }); },
-    create(level) { send({ t: C2S.CREATE, level }); },
+    create(level, priv = false) { send({ t: C2S.CREATE, level, private: priv }); },
     join(code) { send({ t: C2S.JOIN, code }); },
+    quick(level) { send({ t: C2S.QUICK, level }); },
+    /** Açık oda listesini izle (açıkken sunucu değiştikçe yollar) ya da bırak. */
+    watchRooms(on) { send({ t: C2S.ROOMS, watch: on }); },
     seat(seat) { send({ t: C2S.SEAT, seat }); },
     settings(level) { send({ t: C2S.SETTINGS, level }); },
+    privacy(priv) { send({ t: C2S.SETTINGS, private: priv }); },
     start() { send({ t: C2S.START }); },
     leave() { send({ t: C2S.LEAVE }); client.lobby = null; client.world = null; snaps = []; remember(null); },
     /** Maç bitince ya da odadan çıkınca kopya dünya bırakılır (lobi kalır). */

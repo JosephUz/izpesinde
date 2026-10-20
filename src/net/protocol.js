@@ -8,10 +8,12 @@
  */
 export const C2S = {
   HELLO: 'hello',       // { nick, token } — bağlantı kimliği; token varsa eski koltuğa geri bağlanır
-  CREATE: 'create',     // { level } — oda kur (kuran odanın sahibidir)
+  CREATE: 'create',     // { level, private } — oda kur (kuran odanın sahibidir; private: listede görünmez, yalnız kodla)
   JOIN: 'join',         // { code }
+  QUICK: 'quick',       // { level } — hızlı katıl: en dolu açık odaya otur, yoksa yeni herkese açık oda kur
+  ROOMS: 'rooms',       // { watch } — açık oda listesini iste, değiştikçe al (watch: false bırakır)
   SEAT: 'seat',         // { seat } — lobide boş koltuğa geç
-  SETTINGS: 'settings', // { level } — yalnızca kuran
+  SETTINGS: 'settings', // { level?, private? } — yalnızca kuran, lobide
   START: 'start',       // yalnızca kuran
   LEAVE: 'leave',
   INPUT: 'in',          // { dx, dz, sp, a: { use, swap, jump, dash, carry, blend, cycle } } — hareket ve tek seferlik eylemler
@@ -19,13 +21,14 @@ export const C2S = {
 };
 export const S2C = {
   WELCOME: 'welcome',   // { id, token, nick }
-  LOBBY: 'lobby',       // { code, hostId, level, state, seats: [{ seat, id, nick, online } | null] }
+  LOBBY: 'lobby',       // { code, hostId, level, state, private, seats: [{ seat, id, nick, online } | null] }
+  ROOMS: 'rooms',       // { rooms: [{ code, host, n, level, state }] } — katılınabilen herkese açık odalar (yalnızca lobidekiler)
   ERROR: 'error',       // { msg }
   ROUND: 'round',       // yeni tur: { round, you, role, known: [[id, rol]], names, scores, history, intro }
   STATE: 'st',          // her pakette, istemciye özel: süre, evre, işaretler, izler, efektler, kendi sayaçların, olaylar
   RESULT: 'result',     // tur sonu: { result, scores, history, final, next }
   PONG: 'pong',
-  ONLINE: 'on',         // { n } — sitede açık sekme sayısı
+  ONLINE: 'on',         // { n, open } — sitede açık sekme sayısı ve katılınabilen herkese açık oda sayısı
 };
 export const NET = {
   /** Simülasyon adımı ve durum paketi sıklığı (sn): 20 adım/sn, 10 paket/sn. */

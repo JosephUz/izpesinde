@@ -32,15 +32,34 @@ başına oyun aynen oynanır.
 
 ## Çevrim içi oda
 
-Menüde adını yaz, **Oda kur** de; çıkan kodu ya da "Linki kopyala" ile `?oda=KOD` linkini arkadaşlarına yolla.
-Kod bilmeden de oynanır: **Açık odalar** başlamayı bekleyen herkese açık odaları listeler (kuran, zorluk, "n/10",
-KATIL; pencere açıkken liste kendiliğinden yenilenir), **Hızlı katıl** en dolu açık odaya oturtur, yoksa yeni bir
-herkese açık oda kurar. Oda kurarken (ya da lobide kuran) **Özel** seçilirse oda listede ve Hızlı katıl'da görünmez,
-yalnızca kodla katılınır. Oyunu başlamış odaya katılınmaz; liste rol, skor ya da tur bilgisi taşımaz.
-Lobide 10 koltuk vardır, **taraf yoktur**: gelen boş koltuğa oturur, boş bir koltuğa tıklayan oraya geçer, boş
-koltukları botlar doldurur. Botların zorluğunu ve Başlat'ı kuran seçer. **Rol seçimi yoktur**, her tur herkes
+Akış bütün JosephUz oyunlarındaki **oda standardına** uyar (josephuz deposunda `docs/oda-standardi.md`; yazılar
+oradakiyle bire bir). Ana ekranın **ÇEVRİM İÇİ** bölümünde (`● N çevrim içi`): **HIZLI KATIL →** en dolu herkese açık
+lobiye oturtur, uygun oda yoksa yeni herkese açık oda kurar; **ODA KUR** odayı hemen kurar (son seçilen bot zorluğuyla,
+`iz.level`; herkese açık) ve seni bekleme odasına alır; **ODAYA KATIL** altında `ODA KODU` + **KATIL** satırını açar
+(Enter de katılır; kod büyük harfe çevrilir, tiresiz `KPRT4` → `KPRT-4`, kısa kodda `Oda kodunu yaz`). Durum satırı
+`Oda aranıyor…` / `Oda kuruluyor…` / `Odaya bağlanıyor…` ya da hatayı (`Böyle bir oda yok` · `Oda dolu` ·
+`Maç başlamış`) gösterir. Altında **AÇIK ODALAR** listesi ana ekranda durur (ayrı pencere yok): lobideki herkese açık
+odalar, önce insanı çok olan, en çok 20; satırın tamamı bir düğme — kuranın adı, `Normal botlar · n/10 oyuncu`,
+**LOBİDE**, **KATIL →** (doluysa **DOLU**). Sunucu listeyi odada olmayan bağlantılara değişince kendisi yollar
+(~250 ms); istemci yoklamaz. Boşken: `Şu an açık oda yok. Hızlı katıl yeni bir oda kurar.` Sunucuya bağlanılamazken
+üç düğme **YAKINDA** yazar ve liste gizlenir. İz Peşinde'de maç sürerken odaya katılınmaz; liste maçtaki odaları,
+rolleri, skorları göstermez.
+
+Davet linki `?oda=KOD`: açılınca sunucuya bağlanır bağlanmaz odaya kendiliğinden girilir (ad boşsa varsayılan ad).
+Odadayken adres çubuğu `?oda=KOD` gösterir, odadan çıkınca silinir; sayfa yenilenirse aynı odaya dönülür
+(`Odaya geri bağlanıyor…`).
+
+**Bekleme odası**: üstte `ODA · <zorluk> botlar`, büyük kod, **Linki kopyala** (`Link kopyalandı`; pano yoksa link
+yazılır) ve `AÇIK ODA · listede görünür` / `ÖZEL ODA · yalnız kodla`. 10 koltuk, **taraf yoktur**: dolu koltukta ad ve
+`kuran` / `sen` / `koptu`; boş koltukta botun adı ve `Bot · boş koltuk` (üstüne gelince `Buraya otur`), boş koltuğa
+tıklayan oraya geçer, boş koltukları botlar doldurur. Kuran bir oyuncuyu sürükleyip başka koltuğa bırakır ya da önce
+oyuncuya sonra koltuğa tıklar (`Taşınacak koltuğa tıkla`); dolu koltuğa bırakırsa ikisi yer değiştirir. Botların
+zorluğunu ve **ODA: Herkese açık / Özel**'i yalnız kuran değiştirir (özel oda listede ve Hızlı katıl'da görünmez).
+Bilgi satırı `N insan · M bot · beş tur`; kuranda **MAÇI BAŞLAT ↗**, ötekilerde kapalı
+`Kuranın başlatması bekleniyor`; **Odadan çık**. Esc bekleme odasını kapatmaz. **Rol seçimi yoktur**, her tur herkes
 rastgele rol alır. Tur akışı sunucunun saatiyle: 6 sn giriş (kimse kıpırdamaz) → 6 dk oyun → 16 sn tur sonu (önce ~4 sn bitiş sahnesi, sonra tablo)
-tablosu → sonraki tur; beşinci turdan sonra oda lobiye döner. Esc menüsü oyunu durdurmaz.
+tablosu → sonraki tur; beşinci turdan sonra oda lobiye döner (maç sonu tablosunda **LOBİYE DÖN →**, kuran yeniden
+başlatır). Esc menüsü oyunu durdurmaz; çıkış düğmesi çevrim içiyken **Odadan çık**.
 
 - **Sunucu otoriterdir** (`server/rooms.mjs`): her oda kendi dünyasını saniyede 20 adım koşturur, 10 Hz paket yollar.
   Karakter paketi ikilidir ve herkese aynıdır (180 karakter ~1,6 KB: konum, yön, görünüş, bayraklar; rol yok).
@@ -49,18 +68,18 @@ tablosu → sonraki tur; beşinci turdan sonra oda lobiye döner. Esc menüsü o
   oyuncu ekranında göremeyeceği bir şeyi paketlerde de bulamaz.
 - **İstemci** (`src/net/client.js`) dünyanın kopyasını kurar; sahne, arayüz ve harita tek başına oyunun koduyla
   çizer. Başkaları 0,1 sn geriden ara değerle, kendi karakterin yerel girdiden üretilen ileri kaymayla anında yürür.
-- **Kopma**: kimlik sekmeye özel bir token'dır; sayfa yenilenince ya da bağlantı kopunca aynı koltuğa dönülür.
+- **Kopma**: kimlik sekmeye özel bir token'dır; sayfa yenilenince ya da bağlantı kopunca aynı koltuğa dönülür (lobide koltuk 8 sn `koptu` olarak tutulur).
   Koparken karakterini bot yönetir, dönünce sana geçer. Bağlı kimse kalmayınca oda kapanır.
 - `/health`: `{ oyun, rooms, online, inRoom, surum }`; `online` siteyi açık tutan sekme sayısıdır (menünün alt
-  bilgisinde "● N çevrim içi", josephuz.com'da da görünür).
+  ÇEVRİM İÇİ başlığının yanında "● N çevrim içi", josephuz.com'da da görünür).
 
 ## Ekranlar
 
 Çayır Muhafızı düzeni. **Giriş**: sağ üstte [standart üst araç çubuğu](#standart-üst-araç-çubuğu); ad (hatırlanır,
-ilk girişte hazır bir adla gelir), tek sırada **Tek başına**, **Oda kur**, **Odaya katıl**, altında **Hızlı katıl** ve
-**Açık odalar** (açık oda sayısıyla); altında bilgi satırı
-(çevrim içi sayısı) ve 01 / 02 / 03 kural kartları. **Hazırlık**: Tek başına ve Oda kur önce botların zorluğunu sorar
-(hatırlanır). **F1** her ekranda kontrolleri açar.
+ilk girişte hazır bir adla gelir), **TEK BAŞINA ↗**, altında **ÇEVRİM İÇİ** bölümü (HIZLI KATIL → · ODA KUR · ODAYA
+KATIL, durum satırı, AÇIK ODALAR listesi; bkz. [Çevrim içi oda](#çevrim-içi-oda)), bilgi satırı ve (yüksek ekranda)
+01 / 02 / 03 kural kartları; menü sığmazsa kendi içinde kayar. **Hazırlık**: Tek başına önce botların zorluğunu sorar
+(hatırlanır; ODA KUR ve HIZLI KATIL yeni odayı bu zorlukla kurar). **F1** her ekranda kontrolleri açar.
 
 ### Standart üst araç çubuğu
 
@@ -168,16 +187,16 @@ noktaya düşmesi ve iki iz türü, sınırsız işaret ve kasabada tek işaret,
 zıplama/iniş, izleyici, çok insanlı dünya, çevrim içi paketin gizli bilgi taşımaması, beş turluk otomatik maç) ve
 müziğin sahne kuralı + standart çubuğun yazıları (`tests/muzik.test.mjs`, tarayıcısız). Sonra
 sunucuyu boş bir portta açar (testte tur 25 sn, `IZ_TUR_SN`): çevrim içi duman testi (`tests/online-smoke.mjs`, iki
-WebSocket istemcisi: lobi, koltuk, gizli roller, giriş evresi, hareket, kopup geri dönme, ayrılma) ve açık odalar testi (`tests/acik-odalar.mjs`: liste, özel oda, Hızlı katıl, dolu / başlamış oda,
+WebSocket istemcisi: lobi, koltuk, gizli roller, giriş evresi, hareket, kopup geri dönme, ayrılma) ve açık odalar testi (`tests/acik-odalar.mjs`: liste istemeden gelir, özel oda, Hızlı katıl, dolu / başlamış oda (`Maç başlamış`), tiresiz kod, kuranın taşıması / yer değiştirme,
 listede gizli bilgi yok), başsız Chromium ile
 tek başına duman testi (`tests/browser-smoke.mjs`: menü, rol seçimi, hareket, görüş sisi, duraklatma, gerçek sol tıkla
 işaret / yakalama / kılık, kenar uyarısı, kutu, sabit nesne saydamlığı, iz oku, skor tablosu, küçük ekran, beş tur
 geçişi), müzik ölçümü (`tests/muzik-smoke.mjs`: hangi sahnede hangi parça, düğme durduruyor mu, yenilemede korunuyor
 mu, efekt sesinden bağımsız mı — `<audio>` öğelerinin `paused` / `currentTime` değerlerinden), standart üst çubuğun
 yerleşimi (`tests/standart-cubuk.mjs`: masaüstü + üç telefon ölçüsü, Esc menüsü) ve iki tarayıcıyla çevrim içi test
-(`tests/online-browser.mjs`: oda kur, linkle katıl, koltuk, başlat, tur
+(`tests/online-browser.mjs`: ODA KUR hemen, linkle kendiliğinden katılma, `?oda` adreste, koltuk, kuranın tıkla-taşı ve sürükle-bırak ile yer değiştirmesi, yenileyince aynı koltuk, başlat, tur
 girişi, hareket ve öbür ekranda aynı yer, tur sonu, ikinci tur, menü, çıkış) ile açık odalar tarayıcı testi
-(`tests/acik-odalar-browser.mjs`: listeden KATIL, özel oda, Hızlı katıl, 390 px telefon). `online-smoke.mjs` canlı sunucuya da
+(`tests/acik-odalar-browser.mjs`: ana ekrandaki liste, satırdan KATIL, özel oda, kodla katıl, Hızlı katıl, 390 px telefon). `online-smoke.mjs` canlı sunucuya da
 koşturulabilir: `GAME_URL=https://izpesinde-sunucu.josephuz.com node tests/online-smoke.mjs`. Playwright bu depoya kurulmaz; komşu depolardaki kurulum
 bulunur (bkz. `scripts/test.mjs`). Ekran görüntüleri `artifacts/` altına yazılır.
 

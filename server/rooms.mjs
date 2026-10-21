@@ -1,12 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import { BOT_NAMES, CFG } from '../src/config.js';
-import { C2S, LEVEL_KEYS, NET, S2C, SEATS, roomCode } from '../src/net/protocol.js';
+import { C2S, LEVEL_KEYS, NET, S2C, SEATS, normalizeCode, roomCode } from '../src/net/protocol.js';
 import { encodeSnapshot } from '../src/net/snapshot.js';
 import { roundFor, stateFor } from '../src/net/visibility.js';
 import { createWorld, spectate, startRound, step } from '../src/world.js';
 
 /** Tur süresi: IZ_TUR_SN yalnızca testlerde verilir (tur sonu → sonraki tur akışı dakikalarca beklemeden sınansın). */
 const ROUND_SECONDS = Number(process.env.IZ_TUR_SN) || CFG.seconds;
+/** Lobide kopan oyuncunun koltuğu bu kadar tutulur (sayfa yenileme aynı koltuğa döner). */
+const LOBBY_GRACE_MS = 8000;
 
 /**
  * Odalar: kur / katıl / lobi / başlat / turlar / maç sonu. Taraf yoktur: lobide 10 koltuk vardır, her oyuncu boş bir
@@ -22,10 +24,11 @@ const ROUND_SECONDS = Number(process.env.IZ_TUR_SN) || CFG.seconds;
  * devralır** (duran bir karakter gizli kimlik oyununda kendini ele verirdi), dönünce yeniden insana geçer. Oyundan
  * çıkanın koltuğu tur sonuna kadar botta kalır. Oda ancak bağlı kimse kalmayınca kapanır.
  *
- * Açık odalar: oda kurulurken **herkese açık** (varsayılan) ya da **özel** seçilir. Herkese açık oda lobideyken ve boş
- * koltuğu varken listede görünür ve Hızlı katıl'a girer; özel oda yalnızca kodla / linkle bulunur. Oyun başlamış odaya
- * katılınmadığı için liste yalnızca lobideki odaları taşır (kuranın adı, insan sayısı, zorluk); listeden tura dair hiçbir
- * bilgi (rol, skor) çıkmaz. Listeyi açık tutan bağlantı (ROOMS, watch) odalar değiştikçe yenisini alır.
+ * Açık odalar (josephuz deposunda docs/oda-standardi.md): oda **herkese açık** kurulur, kuran lobide **özel** yapabilir.
+ * Herkese açık oda lobideyken listede görünür (doluysa DOLU satırıyla); boş koltuğu varsa Hızlı katıl'a girer. Özel oda
+ * yalnızca kodla / linkle bulunur. Oyun başlamış odaya katılınmadığı için liste yalnızca lobideki odaları taşır (kuranın
+ * adı, insan sayısı, zorluk); listeden tura dair hiçbir bilgi (rol, skor) çıkmaz. Sunucu listeyi odada olmayan her
+ * bağlantıya kendisi yollar (değişince, ~250 ms birleştirerek); istemci yoklamaz.
  */
 export function createRooms({ log = console.log } = {}) {
   const rooms = new Map();   // code -> room
@@ -53,19 +56,21 @@ export function createRooms({ log = console.log } = {}) {
     }, 2000);
   }
 
-  /** Şu an katılınabilen herkese açık odalar: lobide ve boş koltuğu var. Önce dolu olanlar, eşitse eski olan. */
-  function openRooms() {
-    return [...rooms.values()].filter(r => !r.private && r.state === 'lobby' && r.seats.includes(null))
+  /** Lobideki herkese açık odalar (dolular dahil). Önce insanı çok olan, eşitse eski olan. */
+  function listedRooms() {
+    return [...rooms.values()].filter(r => !r.private && r.state === 'lobby')
       .sort((a, b) => seated(b).length - seated(a).length || a.created - b.created);
   }
-  /** Oda listesi: yalnızca lobideki odaların herkese açık bilgisi (rol, skor ya da tur bilgisi yok). En çok 30 oda. */
+  /** Şu an katılınabilen herkese açık odalar (Hızlı katıl, açık oda sayısı): listedekilerden boş koltuğu olanlar. */
+  const openRooms = () => listedRooms().filter(r => r.seats.includes(null));
+  /** Oda listesi: yalnızca lobideki odaların herkese açık bilgisi (rol, skor ya da tur bilgisi yok). En çok 20 oda. */
   function roomsMsg() {
-    return { t: S2C.ROOMS, rooms: openRooms().slice(0, 30).map(r => {
+    return { t: S2C.ROOMS, rooms: listedRooms().slice(0, 20).map(r => {
       const host = r.seats.find(c => c && c.id === r.hostId);
       return { code: r.code, host: host ? host.nick : '', n: seated(r).length, level: r.level, state: r.state };
     }) };
   }
-  /** Odalar değişti: listeyi açık tutan (odada olmayan) bağlantılara en çok 300 ms'de bir yolla. */
+  /** Odalar değişti: odada olmayan (ana ekrandaki) bağlantılara en çok 250 ms'de bir yolla. */
   let roomsTimer = null;
   function roomsChanged() {
     onlineChanged();
@@ -73,8 +78,8 @@ export function createRooms({ log = console.log } = {}) {
     roomsTimer = setTimeout(() => {
       roomsTimer = null;
       let m = null;
-      for (const c of conns) if (c.watch && !c.room) send(c, m ??= roomsMsg());
-    }, 300);
+      for (const c of conns) if (c.token && !c.room) send(c, m ??= roomsMsg());
+    }, 250);
   }
 
   const seated = room => room.seats.filter(Boolean);
@@ -98,7 +103,7 @@ export function createRooms({ log = console.log } = {}) {
     return true;
   }
 
-  /** Koltuğu bırak (Ayrıl, başka odaya geçiş). Oyun sürerken karakteri bot devralır. */
+  /** Koltuğu bırak (Odadan çık, başka odaya geçiş). Oyun sürerken karakteri bot devralır. */
   function leaveRoom(conn) {
     const room = conn.room; if (!room) return;
     const seat = conn.seat;
@@ -243,15 +248,15 @@ export function createRooms({ log = console.log } = {}) {
         byToken.set(conn.token, conn);
         send(conn, { t: S2C.WELCOME, id: conn.id, token: conn.token, nick: conn.nick });
         send(conn, onlineMsg());
+        if (!conn.room) send(conn, roomsMsg());
         return;
       }
       case C2S.CREATE: { createRoom(conn, msg.level, msg.private === true); return; }
       case C2S.JOIN: {
-        const code = String(msg.code || '').toUpperCase().trim();
-        const r = rooms.get(code);
+        const r = rooms.get(normalizeCode(msg.code));
         if (!r) return error(conn, 'Böyle bir oda yok');
         if (r === room) { broadcastLobby(r); if (r.state === 'playing') sendRound(r, conn); return; }
-        if (r.state !== 'lobby') return error(conn, 'Oyun başlamış');
+        if (r.state !== 'lobby') return error(conn, 'Maç başlamış');
         if (!r.seats.includes(null)) return error(conn, 'Oda dolu');
         joinRoom(conn, r);
         return;
@@ -264,8 +269,8 @@ export function createRooms({ log = console.log } = {}) {
         return;
       }
       case C2S.ROOMS: {
-        conn.watch = msg.watch !== false;
-        if (conn.watch && !room) send(conn, roomsMsg());
+        // Liste zaten kendiliğinden gelir; bu istek yalnızca güncelini hemen ister.
+        if (!room) send(conn, roomsMsg());
         return;
       }
       case C2S.SEAT: {
@@ -273,6 +278,16 @@ export function createRooms({ log = console.log } = {}) {
         const seat = Math.round(Number(msg.seat));
         if (!(seat >= 0 && seat < SEATS) || room.seats[seat]) return;
         room.seats[conn.seat] = null; room.seats[seat] = conn; conn.seat = seat;
+        broadcastLobby(room); return;
+      }
+      case C2S.MOVE: {
+        // Kuran bir oyuncuyu başka koltuğa taşır; hedef doluysa ikisi yer değiştirir.
+        if (!room || room.hostId !== conn.id || room.state !== 'lobby') return;
+        const seat = Math.round(Number(msg.seat)), who = room.seats.find(c => c && c.id === msg.id);
+        if (!who || !(seat >= 0 && seat < SEATS) || who.seat === seat) return;
+        const other = room.seats[seat], from = who.seat;
+        room.seats[from] = other; room.seats[seat] = who; who.seat = seat;
+        if (other) other.seat = from;
         broadcastLobby(room); return;
       }
       case C2S.SETTINGS: {
@@ -299,7 +314,7 @@ export function createRooms({ log = console.log } = {}) {
     if (conn.room) leaveRoom(conn);
     let code = roomCode(); while (rooms.has(code)) code = roomCode();
     const r = { code, hostId: conn.id, seats: Array(SEATS).fill(null), state: 'lobby', level: level(lvl), private: Boolean(priv), world: null, timer: null, created: Date.now() };
-    r.seats[0] = conn; conn.room = r; conn.seat = 0; conn.watch = false;
+    r.seats[0] = conn; conn.room = r; conn.seat = 0;
     rooms.set(code, r);
     broadcastLobby(r); log(`oda kuruldu ${code} (${conn.nick}${r.private ? ', özel' : ''})`);
   }
@@ -307,14 +322,14 @@ export function createRooms({ log = console.log } = {}) {
   function joinRoom(conn, r) {
     if (conn.room) leaveRoom(conn);
     const seat = r.seats.indexOf(null);
-    r.seats[seat] = conn; conn.room = r; conn.seat = seat; conn.watch = false;
+    r.seats[seat] = conn; conn.room = r; conn.seat = seat;
     broadcastLobby(r); log(`katıldı ${conn.nick} -> ${r.code}`);
   }
 
   let nextId = 1;
   return {
     attach(ws) {
-      const conn = { id: nextId++, token: null, nick: '', ws, room: null, seat: -1, input: {}, actions: {}, spectator: 0, since: 0, watch: false };
+      const conn = { id: nextId++, token: null, nick: '', ws, room: null, seat: -1, input: {}, actions: {}, spectator: 0, since: 0 };
       conns.add(conn); onlineChanged();
       ws.on('message', (data, isBinary) => { try { onMessage(conn, data, isBinary); } catch (err) { log('mesaj hatası', err); } });
       ws.on('close', () => {
@@ -327,7 +342,13 @@ export function createRooms({ log = console.log } = {}) {
           conn.input = {}; conn.actions = {};
           log(`koptu ${conn.nick} (${r.code})`);
           if (!closeIfEmpty(r)) broadcastLobby(r);
-        } else leaveRoom(conn);
+        } else {
+          // Lobide kopma: sayfa yenilenince aynı koltuğa dönülsün diye koltuk LOBBY_GRACE_MS boyunca tutulur
+          // (`koptu`); aynı token'la dönülmezse bırakılır. Bu arada maç başlarsa koltuk oyundaki kopma gibi tutulur.
+          log(`koptu ${conn.nick} (${r.code}, lobi)`);
+          broadcastLobby(r);
+          setTimeout(() => { if (!conn.ws && conn.room === r && r.state === 'lobby') leaveRoom(conn); }, LOBBY_GRACE_MS);
+        }
       });
       ws.on('error', () => {});
     },

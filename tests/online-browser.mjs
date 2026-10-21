@@ -22,22 +22,42 @@ try {
   const a = await player('/?test=1');
   await a.fill('#nick', 'Ayşe');
   await a.waitForFunction(() => !document.querySelector('#create').disabled, null, { timeout: 8000 });
+  // ODA KUR odayı hemen kurar (önce ayar ekranı yok), adres çubuğu ?oda=KOD gösterir.
   await a.click('#create');
-  await a.click('#setupGo');
   await a.waitForSelector('.room-code');
   const code = (await a.textContent('.room-code')).trim();
   assert.match(code, /^[A-Z]{4}-\d$/);
+  assert.equal(new URL(a.url()).searchParams.get('oda'), code, 'odadayken adreste ?oda=KOD');
+  assert.match(await a.textContent('#overlay .eyebrow'), /^ODA · Normal botlar$/);
+  assert.match(await a.textContent('.room-visibility'), /AÇIK ODA · listede görünür/);
 
-  const b = await player('/?test=1&oda=' + code);
-  assert.equal(await b.inputValue('#code'), code, 'link oda kodunu doldurur');
-  await b.fill('#nick', 'Bora');
-  await b.waitForFunction(() => !document.querySelector('#joinGo').closest('#join-row').hidden && window.__iz.net.connected, null, { timeout: 8000 });
-  await b.click('#joinGo');
-  await b.waitForSelector('.seat.me');
+  // Davet linki: ad boşken bile bağlanır bağlanmaz odaya kendiliğinden girer.
+  const b = await player('/?test=1&oda=' + code.replace('-', '').toLowerCase());
+  await b.waitForSelector('.seat.me', { timeout: 8000 });
+  assert.equal((await b.textContent('.room-code')).trim(), code, 'link (tiresiz, küçük harf) doğru odaya sokar');
+  assert.equal(new URL(b.url()).searchParams.get('oda'), code);
   await b.click('[data-seat="4"]');
-  await a.waitForFunction(() => document.querySelectorAll('.seat')[4]?.textContent.includes('Bora'));
-  assert.equal(await a.locator('#roomStart').count(), 1, 'kuran Başlat görür');
+  await a.waitForFunction(() => document.querySelectorAll('.seat')[4]?.textContent.includes('İzci-'));
+  assert.match(await a.textContent('.seat[data-seat="0"]'), /kuran · sen/);
+  assert.equal(await b.textContent('#overlay .buttons .primary'), 'Kuranın başlatması bekleniyor');
+  assert.equal(await a.locator('#roomStart').count(), 1, 'kuran MAÇI BAŞLAT görür');
+  assert.match(await a.textContent('#roomStart'), /MAÇI BAŞLAT/);
   assert.equal(await b.locator('#roomStart').count(), 0, 'katılan başlatamaz');
+  assert.match(await a.textContent('.seat[data-seat="1"]'), /Bot · boş koltuk/);
+
+  // Kuranın taşıması: oyuncuya sonra koltuğa tıkla (dolu koltukta yer değiştirir), sürükle-bırak ile geri.
+  await a.click('.seat[data-seat="4"]');
+  assert.equal(await a.textContent('#lobbyHint'), 'Taşınacak koltuğa tıkla');
+  await a.click('.seat[data-seat="0"]');
+  await a.waitForFunction(() => document.querySelector('.seat[data-seat="4"]')?.classList.contains('me') && /İzci-/.test(document.querySelector('.seat[data-seat="0"]').textContent));
+  await b.waitForFunction(() => document.querySelector('.seat[data-seat="0"]')?.classList.contains('me'));
+  await a.dragAndDrop('.seat[data-seat="0"]', '.seat[data-seat="4"]');
+  await a.waitForFunction(() => document.querySelector('.seat[data-seat="0"]')?.classList.contains('me') && /İzci-/.test(document.querySelector('.seat[data-seat="4"]').textContent));
+  await b.waitForFunction(() => document.querySelector('.seat[data-seat="4"]')?.classList.contains('me'));
+  // Sayfa yenilenince (adreste ?oda=KOD) aynı koltuğa dönülür.
+  await b.reload();
+  await b.waitForFunction(() => document.querySelector('.seat[data-seat="4"]')?.classList.contains('me'), null, { timeout: 8000 });
+  await a.waitForFunction(() => !document.querySelector('.seat[data-seat="4"]').textContent.includes('koptu'));
   await a.screenshot({ path: 'artifacts/online-lobby.png' });
 
   // Başlat: rol seçimi yok, iki oyuncu da tur girişini ve geri sayımı görür.
@@ -86,9 +106,11 @@ try {
   const t0 = await b.evaluate(() => window.__iz.world.time);
   await b.waitForTimeout(600);
   assert.ok(await b.evaluate(() => window.__iz.world.time) > t0 + 0.3, 'menü açıkken oyun sürer');
+  assert.equal(await a.textContent('#quit'), 'Odadan çık');
   await a.click('#quit');
   await a.waitForSelector('#menu:not([hidden])');
   assert.equal(await a.evaluate(() => window.__iz.app.online), false);
+  assert.equal(new URL(a.url()).searchParams.get('oda'), null, 'odadan çıkınca ?oda silinir');
   assert.deepEqual(errors, []);
   console.log('Çevrim içi tarayıcı testi geçti: oda kur, linkle katıl, koltuk, başlat, tur girişi, hareket, tur sonu, ikinci tur, menü, çıkış.');
 } finally {

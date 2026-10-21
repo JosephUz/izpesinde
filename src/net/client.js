@@ -3,7 +3,7 @@ import { computeEnvironment } from '../environment.js';
 import { blocked } from '../physics.js';
 import { active } from '../roster.js';
 import { serverUrl } from '../platform.js';
-import { C2S, NET, S2C } from './protocol.js';
+import { C2S, NET, S2C, normalizeCode } from './protocol.js';
 import { applyLook, decodeSnapshot } from './snapshot.js';
 
 /**
@@ -184,11 +184,13 @@ export function createNetClient(hooks) {
     connect,
     hello(nick) { curNick = nick; send({ t: C2S.HELLO, nick, token: token() }); },
     create(level, priv = false) { send({ t: C2S.CREATE, level, private: priv }); },
-    join(code) { send({ t: C2S.JOIN, code }); },
+    join(code) { send({ t: C2S.JOIN, code: normalizeCode(code) }); },
     quick(level) { send({ t: C2S.QUICK, level }); },
-    /** Açık oda listesini izle (açıkken sunucu değiştikçe yollar) ya da bırak. */
-    watchRooms(on) { send({ t: C2S.ROOMS, watch: on }); },
+    /** Açık oda listesinin güncelini hemen iste (odada değilken sunucu değiştikçe zaten kendisi yollar). */
+    requestRooms() { send({ t: C2S.ROOMS }); },
     seat(seat) { send({ t: C2S.SEAT, seat }); },
+    /** Kuran: oyuncuyu koltuğa taşı (dolu koltukta yer değiştirirler). */
+    move(id, seat) { send({ t: C2S.MOVE, id, seat }); },
     settings(level) { send({ t: C2S.SETTINGS, level }); },
     privacy(priv) { send({ t: C2S.SETTINGS, private: priv }); },
     start() { send({ t: C2S.START }); },

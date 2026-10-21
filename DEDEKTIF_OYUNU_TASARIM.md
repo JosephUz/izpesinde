@@ -165,11 +165,11 @@ Puanlar tur boyunca birikir, tur sonunda tek kez skora eklenir.
 
 ## 16. Çevrim içi oda
 
-- **Oda kur / Odaya katıl**: ad yazılır, oda kurulunca 5 karakterlik bir kod (ve `?oda=KOD` linki) çıkar. Hesap yoktur.
-- **Herkese açık / özel oda**: oda kurulurken seçilir (varsayılan herkese açık); kuran lobide değiştirebilir. Özel oda listede ve Hızlı katıl'da görünmez, yalnızca kodla ya da linkle katılınır.
-- **Açık odalar**: ana menüdeki pencere, başlamayı bekleyen (lobideki) ve boş koltuğu olan herkese açık odaları listeler: kuranın adı, botların zorluğu, "n/10" ve **KATIL** (kod gerekmez). Pencere açıkken liste odalar değiştikçe kendiliğinden yenilenir; düğme açık oda sayısını gösterir. Oyunu başlamış odaya katılınmaz (tur arasında da), maç bitip oda lobiye dönünce yeniden listelenir. Listede yalnızca bu bilgiler vardır; rol, skor ya da tur bilgisi yoktur.
+- **ODA KUR / ODAYA KATIL** (josephuz deposunda docs/oda-standardi.md): ad yazılır; ODA KUR odayı hemen kurar (son seçilen zorlukla, herkese açık), kod (`KPRT-4`) ve `?oda=KOD` linki çıkar; link açılınca odaya kendiliğinden girilir. Hesap yoktur.
+- **Herkese açık / özel oda**: oda herkese açık kurulur; kuran lobide özel yapabilir. Özel oda listede ve Hızlı katıl'da görünmez, yalnızca kodla ya da linkle katılınır.
+- **AÇIK ODALAR**: ana ekranda (ayrı pencere yok) lobideki herkese açık odaları listeler: kuranın adı, "<zorluk> botlar · n/10 oyuncu", LOBİDE ve **KATIL →** (doluysa DOLU; kod gerekmez). Sunucu, odada olmayan bağlantılara liste değişince kendisi yollar. Oyunu başlamış odaya katılınmaz (`Maç başlamış`, tur arasında da), maç bitip oda lobiye dönünce yeniden listelenir. Listede yalnızca bu bilgiler vardır; rol, skor ya da tur bilgisi yoktur.
 - **Hızlı katıl**: en dolu açık odaya oturur (eşitse en eski); uygun oda yoksa o oyuncunun kurduğu yeni bir herkese açık oda açılır (zorluk son seçilen).
-- **Lobi**: 10 koltuk, taraf yok. Gelen ilk boş koltuğa oturur; boş bir koltuğa tıklayan oraya geçer. Boş koltukları botlar doldurur (koltuğun bot adıyla). Botların zorluğunu ve **Başlat**'ı yalnızca kuran seçer; "hazır" yoktur.
+- **Lobi**: 10 koltuk, taraf yok. Gelen ilk boş koltuğa oturur; boş bir koltuğa tıklayan oraya geçer. Kuran bir oyuncuyu sürükleyip başka koltuğa bırakır ya da önce oyuncuya sonra koltuğa tıklar; dolu koltukta ikisi yer değiştirir. Boş koltukları botlar doldurur (koltuğun bot adıyla). Botların zorluğunu, görünürlüğü ve **MAÇI BAŞLAT ↗**'ı yalnızca kuran seçer; "hazır" yoktur.
 - **Roller**: her tur herkese rastgele; tanıma kuralı aynıdır (suçlular birbirini, kanun savcıları tanır).
 - **Tur akışı** sunucunun saatiyle: giriş (6 sn) → oyun (6 dk) → tur sonu (16 sn: önce ~4 sn bitiş sahnesi, sonra tablo, roller açılır) → sonraki tur. Beşinci turdan sonra oda lobiye döner; aynı oyuncularla yeni maç başlatılabilir.
 - **Kopma**: sayfa yenilenince ya da bağlantı kopunca aynı koltuğa dönülür. Koparken karakterini **bot yönetir** (duran bir karakter gizli kimlik oyununda kendini ele verirdi); dönünce sana geçer. Odadan çıkanın karakteri tur sonuna kadar botta kalır. Bağlı kimse kalmayınca oda kapanır.

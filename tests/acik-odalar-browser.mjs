@@ -1,6 +1,8 @@
-// Açık odalar tarayıcı testi: iki ayrı tarayıcı bağlamı (iki oyuncu) gerçek menüden.
-// Sınananlar: A herkese açık oda kurar → B "Açık odalar" penceresinde görür ve KATIL ile (kodsuz) katılır; liste
-// açıkken kendiliğinden yenilenir; özel oda listede görünmez; Hızlı katıl iki oyuncuyu aynı odada buluşturur.
+// Açık odalar tarayıcı testi: iki ayrı tarayıcı bağlamı (iki oyuncu) gerçek ana ekrandan (oda standardı,
+// josephuz deposunda docs/oda-standardi.md). Sınananlar: AÇIK ODALAR listesi ana ekranda durur (ayrı pencere yok) ve
+// kendiliğinden yenilenir; A herkese açık oda kurar → B satırı ("Ayşe", "Normal botlar · 1/10 oyuncu", LOBİDE,
+// KATIL →) görür ve satıra tıklayarak (kodsuz) katılır; özel oda listede görünmez; ODAYA KATIL kodu tiresiz ve küçük
+// harfle de kabul eder, kısa kodda "Oda kodunu yaz" der; Hızlı katıl iki oyuncuyu aynı odada buluşturur.
 // Ekran görüntüleri artifacts/odalar-*.png (masaüstü ve 390 px telefon).
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -18,27 +20,34 @@ try {
     await page.goto(url + path);
     await page.waitForFunction(() => window.__iz);
     await page.fill('#nick', nick);
-    await page.waitForFunction(() => !document.querySelector('#rooms').disabled, null, { timeout: 8000 });
+    await page.waitForFunction(() => !document.querySelector('#quick').disabled, null, { timeout: 8000 });
     return page;
   }
-  const leave = async p => { await p.click('#roomLeave'); await p.waitForSelector('#menu:not([hidden])'); };
+  const leave = async p => {
+    assert.equal(await p.textContent('#roomLeave'), 'Odadan çık');
+    await p.click('#roomLeave');
+    await p.waitForSelector('#menu:not([hidden])');
+  };
 
-  // B açık odalar penceresini açar; A oda kurunca liste kendiliğinden yenilenir.
+  // Ana ekran: ÇEVRİM İÇİ bölümü sırası ve yazıları; liste ana ekranda (pencere değil).
   const b = await player('Bora');
-  await b.click('#rooms');
-  await b.waitForSelector('#roomList .room-empty, #roomList .room-row');
+  assert.deepEqual(await b.$$eval('#online-row button', bs => bs.map(x => x.textContent.trim())), ['HIZLI KATIL →', 'ODA KUR', 'ODAYA KATIL']);
+  await b.waitForSelector('#rooms-block:not([hidden]) #roomList .room-empty, #roomList .room-row');
+  assert.equal(await b.locator('#overlay:not([hidden])').count(), 0, 'açık odalar ayrı pencere değil');
   const a = await player('Ayşe');
   await a.click('#create');
-  assert.equal(await a.locator('[data-setup-private="0"].selected').count(), 1, 'oda varsayılan olarak herkese açık');
-  await a.click('#setupGo');
   await a.waitForSelector('.room-code');
+  assert.equal(await a.locator('[data-lobby-private="0"].selected').count(), 1, 'oda herkese açık kurulur');
   const code = (await a.textContent('.room-code')).trim();
-  await b.waitForSelector('.room-row:has-text("Ayşe")', { timeout: 5000 });
-  assert.match(await b.textContent('.room-row:has-text("Ayşe")'), /1\/10/);
+  const row = b.locator('.room-row:has-text("Ayşe")');
+  await row.waitFor({ timeout: 5000 });
+  const rowText = await row.textContent();
+  for (const part of ['Normal botlar · 1/10 oyuncu', 'LOBİDE', 'KATIL →']) assert.ok(rowText.includes(part), `satırda "${part}"`);
+  assert.match(await b.textContent('#roomsCount'), /^[1-9]\d*$/);
   await b.screenshot({ path: 'artifacts/odalar-liste.png' });
 
-  // KATIL: kod yazmadan A'nın odasına.
-  await b.click('.room-row:has-text("Ayşe") [data-room]');
+  // Satırın tamamı KATIL düğmesidir: kod yazmadan A'nın odasına.
+  await row.click();
   await b.waitForSelector('.seat.me');
   assert.equal((await b.textContent('.room-code')).trim(), code, 'KATIL doğru odaya oturtur');
   await a.waitForFunction(() => document.querySelectorAll('.seat:not(.bot)').length === 2);
@@ -48,12 +57,21 @@ try {
   // Kuran lobide odayı özel yapar: listeden düşer.
   await a.click('[data-lobby-private="1"]');
   await a.waitForSelector('[data-lobby-private="1"].selected');
-  await b.click('#rooms');
-  await b.waitForSelector('#roomList .room-empty, #roomList .room-row');
-  await b.waitForTimeout(500);
+  assert.match(await a.textContent('.room-visibility'), /ÖZEL ODA · yalnız kodla/);
+  await b.waitForTimeout(700);
   assert.equal(await b.locator('.room-row:has-text("Ayşe")').count(), 0, 'özel oda listede görünmez');
-  await b.click('#roomsBack');
-  await leave(a);
+
+  // ODAYA KATIL: kısa kod uyarır; tiresiz küçük harfli kod tire eklenerek katılır (özel odaya kodla).
+  await b.click('#join');
+  await b.fill('#code', 'kp');
+  await b.press('#code', 'Enter');
+  assert.equal(await b.textContent('#online-status'), 'Oda kodunu yaz');
+  await b.fill('#code', code.replace('-', '').toLowerCase());
+  assert.equal(await b.inputValue('#code'), code.replace('-', ''), 'kod büyük harfe çevrilir');
+  await b.click('#joinGo');
+  await b.waitForSelector('.seat.me');
+  assert.equal((await b.textContent('.room-code')).trim(), code);
+  await leave(b); await leave(a);
 
   // Hızlı katıl: ilki (uygun oda yokken) yeni oda kurar, ikincisi aynı odaya oturur.
   await a.click('#quick');
@@ -65,20 +83,18 @@ try {
   assert.equal((await b.textContent('.room-code')).trim(), quickCode, 'Hızlı katıl aynı odada buluşturur');
   await leave(b); await leave(a);
 
-  // Telefon genişliği (390 px): ana menü ve liste.
+  // Telefon genişliği (390 px): ana ekran ve satır içi liste.
   const m = await player('Mert', { width: 390, height: 844 });
-  await a.click('#create'); await a.click('#setupGo'); await a.waitForSelector('.room-code');
-  await m.screenshot({ path: 'artifacts/odalar-telefon-menu.png' });
-  await m.click('#rooms');
+  await a.click('#create'); await a.waitForSelector('.room-code');
   await m.waitForSelector('.room-row:has-text("Ayşe")', { timeout: 5000 });
+  await m.locator('#rooms-block').scrollIntoViewIfNeeded();
   assert.ok(await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'telefonda yatay taşma yok');
+  assert.ok(await m.evaluate(() => { const r = document.querySelector('.room-row').getBoundingClientRect(); return r.right <= innerWidth + 1; }), 'satır ekrana sığar');
   await m.screenshot({ path: 'artifacts/odalar-telefon-liste.png' });
-  await m.keyboard.press('Escape');
-  await m.waitForFunction(() => document.querySelector('#overlay').hidden);
   await leave(a);
 
   assert.deepEqual(errors, []);
-  console.log('Açık odalar tarayıcı testi geçti: liste, KATIL, özel oda, Hızlı katıl, telefon.');
+  console.log('Açık odalar tarayıcı testi geçti: ana ekran listesi, satırdan KATIL, özel oda, kodla katıl, Hızlı katıl, telefon.');
 } finally {
   await browser.close();
 }

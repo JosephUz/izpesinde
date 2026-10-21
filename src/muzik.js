@@ -42,7 +42,7 @@ const kis = v => Math.max(0, Math.min(1, v));
  * Hangi sahne çalmalı? Saf işlev: oyun akışından ve dünyanın durumundan okur, her kareden sorulabilir (aynı sahne
  * yeniden verilince hiçbir şey olmaz).
  *  - `playing`: tur sürüyor mu (main.js `app.playing`)
- *  - `perde`: açık pencere ('yardim' | 'mola' | 'rol' | 'giris' | 'sonuc' | 'lobi' | 'hazirlik' | 'odalar' | null). Yardım
+ *  - `perde`: açık pencere ('yardim' | 'mola' | 'rol' | 'giris' | 'sonuc' | 'lobi' | 'hazirlik' | null). Yardım
  *    penceresi turun üstünde açılır, müzik turun müziğidir; öbür pencereler bir aradır, sakin parçaya döner.
  *  - `w`: dünya (time, seconds, result)
  *  - `kovalamaca`: savcının ekran kenarındaki işaret okları görünüyor mu (ui.js `#chase`)

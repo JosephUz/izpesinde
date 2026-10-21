@@ -11,8 +11,9 @@ export const C2S = {
   CREATE: 'create',     // { level, private } — oda kur (kuran odanın sahibidir; private: listede görünmez, yalnız kodla)
   JOIN: 'join',         // { code }
   QUICK: 'quick',       // { level } — hızlı katıl: en dolu açık odaya otur, yoksa yeni herkese açık oda kur
-  ROOMS: 'rooms',       // { watch } — açık oda listesini iste, değiştikçe al (watch: false bırakır)
+  ROOMS: 'rooms',       // açık oda listesini hemen iste (odada olmayan bağlantıya liste değişince zaten kendiliğinden gelir)
   SEAT: 'seat',         // { seat } — lobide boş koltuğa geç
+  MOVE: 'move',         // { id, seat } — yalnızca kuran, lobide: oyuncuyu koltuğa taşı (dolu koltukta ikisi yer değiştirir)
   SETTINGS: 'settings', // { level?, private? } — yalnızca kuran, lobide
   START: 'start',       // yalnızca kuran
   LEAVE: 'leave',
@@ -22,7 +23,7 @@ export const C2S = {
 export const S2C = {
   WELCOME: 'welcome',   // { id, token, nick }
   LOBBY: 'lobby',       // { code, hostId, level, state, private, seats: [{ seat, id, nick, online } | null] }
-  ROOMS: 'rooms',       // { rooms: [{ code, host, n, level, state }] } — katılınabilen herkese açık odalar (yalnızca lobidekiler)
+  ROOMS: 'rooms',       // { rooms: [{ code, host, n, level, state }] } — lobideki herkese açık odalar (n = 10: DOLU), en çok 20
   ERROR: 'error',       // { msg }
   ROUND: 'round',       // yeni tur: { round, you, role, known: [[id, rol]], names, scores, history, intro }
   STATE: 'st',          // her pakette, istemciye özel: süre, evre, işaretler, izler, efektler, kendi sayaçların, olaylar
@@ -54,4 +55,9 @@ export const roomCode = () => {
   let s = '';
   for (let i = 0; i < 4; i++) s += A[Math.floor(Math.random() * A.length)];
   return `${s}-${D[Math.floor(Math.random() * D.length)]}`;
+};
+/** Kod girişi: büyük harf, harf ve rakam dışı atılır; tiresiz yazılan `KPRT4` → `KPRT-4`. */
+export const normalizeCode = v => {
+  const s = String(v ?? '').toLocaleUpperCase('tr').replace(/İ/g, 'I').replace(/[^A-Z0-9]/g, '');
+  return s.length === 5 ? `${s.slice(0, 4)}-${s[4]}` : s;
 };

@@ -197,3 +197,17 @@ body.playing #iz-game.touch #toptools,body.playing #iz-game.touch #brand,#iz-gam
 .lobby-opts{display:flex;gap:16px;flex-wrap:wrap}.lobby-opts>div{flex:1;min-width:200px}.lobby-opts .lobby-levels{width:100%}.setup-privacy{margin-top:10px}
 @media (max-width:480px){.room-row{gap:8px;padding:8px 8px 8px 12px}.room-name b{font-size:14px}.room-row .secondary{padding:9px 10px}.dialog .buttons{flex-wrap:wrap}}
 @media (max-height:500px){#home-buttons{flex-wrap:nowrap}#home-buttons #start{flex-basis:auto}#home-buttons .secondary,#online-row .secondary{padding:12px 14px}#online-row{margin-top:6px}}
+/* Ana ekranın ÇEVRİM İÇİ bölümü ve AÇIK ODALAR listesi (josephuz deposunda docs/oda-standardi.md) */
+#menu{bottom:52px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#d8b57440 transparent;padding-right:6px}
+#online-block{margin-top:20px;width:min(470px,100%)}.online-head{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}.online-head #online{color:#9fd99a;font-size:11px;letter-spacing:.5px}
+#online-row{display:flex;gap:8px;width:100%;margin-top:0}#online-row #quick{min-width:0;flex:1.5;padding:14px 16px;text-align:left;white-space:nowrap}#online-row #quick span{font-size:15px}#online-row .secondary{flex:1;padding:12px 10px}#online-row button:disabled{opacity:.55;cursor:default;filter:none}
+#online-status{margin:8px 0 0;font-size:12px;color:var(--gold)}#online-status:empty{display:none}#online-status.error{color:#e8806f}
+#rooms-block{margin-top:14px}#rooms-block .eyebrow b{color:var(--paper);margin-left:6px;font-weight:600}#rooms-block .room-list{margin:8px 0 0;max-height:min(232px,26vh)}
+button.room-row{width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;flex-shrink:0}button.room-row:hover:not(:disabled){border-color:#d8b57480}button.room-row:disabled{cursor:default;filter:none}
+.room-tag{font-size:9px;letter-spacing:1.5px;color:#9fd99a;border:1px solid #9fd99a55;padding:3px 6px;white-space:nowrap}
+.room-go{font-size:11px;font-weight:600;letter-spacing:1.5px;white-space:nowrap;color:var(--gold);padding:8px 12px;border:1px solid #d8b57480}button.room-row:disabled .room-go{opacity:.55;color:var(--muted)}
+.room-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.room-head #roomLink{padding:9px 14px}.dialog p.room-visibility{font-size:10px;letter-spacing:1.8px;color:var(--gold);margin:0 0 4px}
+.seat:not(:disabled){cursor:pointer}.seat.moving{border-color:#9fd99a;box-shadow:0 0 0 1px #9fd99a inset}.seat.drop{border-color:var(--gold);border-style:solid;opacity:1}.seat .seat-sit{display:none;color:var(--gold)}.seat.bot:hover .seat-sit{display:block}.seat.bot:hover .seat-tag{display:none}
+@media (max-height:1000px){#menu .rule-cards{display:none}}
+@media (max-width:480px){#online-row{flex-wrap:wrap}#online-row #quick{flex-basis:100%}.room-tag{display:none}}
+@media (max-height:500px){#menu{bottom:28px}#online-block{margin-top:12px}#online-row #quick,#online-row .secondary{padding:11px 12px}#rooms-block{margin-top:10px}}

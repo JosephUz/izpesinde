@@ -77,13 +77,13 @@ const server = http.createServer(async (req, res) => {
 
 const rooms = createRooms({ log: (...a) => console.log(new Date().toLocaleTimeString('tr-TR'), ...a) });
 /**
- * WebSocket yalnız bilinen sayfalardan: aynı adres (yerelde), *.josephuz.com (Cloudflare'deki statik site) ve localhost.
+ * WebSocket yalnız bilinen sayfalardan: aynı adres (yerelde), *.josephuz.com (Cloudflare'deki statik site), itch.io (*.itch.zone, *.itch.io) ve localhost.
  * Origin'siz istemciler (testler, araçlar) kabul edilir.
  */
 function allowedOrigin(req) {
   const origin = req.headers.origin;
   if (!origin) return true;
-  try { const u = new URL(origin); return u.host === req.headers.host || u.hostname === 'josephuz.com' || u.hostname.endsWith('.josephuz.com') || u.hostname === 'localhost' || u.hostname === '127.0.0.1'; } catch { return false; }
+  try { const u = new URL(origin); return u.host === req.headers.host || u.hostname === 'josephuz.com' || u.hostname.endsWith('.josephuz.com') || u.hostname.endsWith('.itch.zone') || u.hostname.endsWith('.itch.io') || u.hostname === 'localhost' || u.hostname === '127.0.0.1'; } catch { return false; }
 }
 const wss = new WebSocketServer({ server, maxPayload: 16 * 1024, verifyClient: ({ req }) => allowedOrigin(req) });
 wss.on('connection', ws => rooms.attach(ws));

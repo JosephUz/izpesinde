@@ -27,7 +27,7 @@ export function disguise(world, a, b) {
     if (sees(world, obs, a)) obs.suspects.set(a.id, { score: (s?.score || 0) + 2, time: world.time, x: a.x, z: a.z });
     else if (s) obs.suspects.delete(a.id);
   }
-  emit(world, 'Kılık değişti (−1). Seni görenler takibi sürdürebilir.', 'info', a.id);
+  emit(world, 'kilikDegisti', 'info', a.id);
   checkRights(world);
   return true;
 }
@@ -40,7 +40,7 @@ export function murder(world, a, b = nearest(world, a, b => b.role !== 'criminal
   dropCrate(world, b);
   const S = CFG.scores;
   world.tally[a.id] += b.role === 'detective' ? S.killDetective : b.role === 'prosecutor' ? S.killProsecutor : S.killCivilian;
-  emit(world, 'Kasabada biri öldürüldü.', 'danger');
+  emit(world, 'olduruldu', 'danger');
   world.effects.push({ type: 'murder', x: b.x, z: b.z, t: 1 });
   checkRights(world);
   return true;

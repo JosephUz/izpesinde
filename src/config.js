@@ -44,9 +44,9 @@ export const CFG = {
  * öldürme eğilimi.
  */
 export const LEVELS = {
-  easy: { label: 'Kolay', reaction: 1.6, memory: 9, speed: 0.85, markAt: 0.7, killChance: 0, hesitate: 7 },
-  normal: { label: 'Normal', reaction: 0.8, memory: 14, speed: 1, markAt: 0.9, killChance: 0.25, hesitate: 4 },
-  hard: { label: 'Zor', reaction: 0.4, memory: 20, speed: 1.08, markAt: 1.1, killChance: 0.5, hesitate: 2 },
+  easy: { reaction: 1.6, memory: 9, speed: 0.85, markAt: 0.7, killChance: 0, hesitate: 7 },
+  normal: { reaction: 0.8, memory: 14, speed: 1, markAt: 0.9, killChance: 0.25, hesitate: 4 },
+  hard: { reaction: 0.4, memory: 20, speed: 1.08, markAt: 1.1, killChance: 0.5, hesitate: 2 },
 };
 
 /**
@@ -62,9 +62,9 @@ export const CAMERA = { offset: [35, 46, 38], zoomPlay: 26, zoomMenu: 30, zoomMi
  */
 export const SEE_THROUGH = { keep: 0.3, speed: 8, head: 1.2 };
 
-export const ROLE = { detective: 'Dedektif', prosecutor: 'Savcı', criminal: 'Suçlu' };
 /** Kıyafet renkleri: herkes bunlardan birini giyer; suçlu kılık değiştirince başkasınınkini alır. */
 export const PALETTE = ['#466c76', '#9b5549', '#bd964e', '#697858', '#746483', '#b8764d', '#56877b', '#535e83', '#957463', '#888c68'];
+/** Tek başına oyunda yarışmacıların adları; 0 oyuncunun kendisidir (ekranda dile göre 'Sen' / 'You', bkz. main.js). */
 export const NAMES = ['Sen', 'Ada', 'Boran', 'Cemre', 'Demir', 'Ekin', 'Feraye', 'Ilgaz', 'Mira', 'Yaman'];
 /** Çevrim içi odada boş koltuğa oturan botların adları (koltuk sırasıyla; insan oturunca onun adı geçer). */
 export const BOT_NAMES = ['Kaya', 'Ada', 'Boran', 'Cemre', 'Demir', 'Ekin', 'Feraye', 'Ilgaz', 'Mira', 'Yaman'];

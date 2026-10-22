@@ -10,6 +10,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GERILIM_SN, MUZIK_VAR, sahneSec } from '../src/muzik.js';
+import tr from '../src/diller/tr.js';
+import en from '../src/diller/en.js';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const oku = f => readFileSync(path.join(root, f), 'utf8');
@@ -52,9 +54,13 @@ test('STANDART üst araç çubuğu: dört düğme, bu sırayla, bu yazılarla', 
   const cubuk = html.match(/<div id="toptools">([\s\S]*?)<\/div>/)?.[1];
   assert.ok(cubuk, 'index.html içinde #toptools olmalı');
   const sira = [...cubuk.matchAll(/id="([^"]+)"/g)].map(m => m[1]);
-  assert.deepEqual(sira, ['homeLink', 'sound', 'muzik', 'helpBtn'], 'standart sıra: ← josephuz.com · Ses · Müzik · Kontroller F1');
+  assert.deepEqual(sira, ['homeLink', 'sound', 'muzik', 'helpBtn', 'dil'], 'standart sıra: ← josephuz.com · Ses · Müzik · Kontroller F1 · dil (EN/TR)');
   assert.ok(cubuk.includes('← <span class="site-name">josephuz.com</span>'), 'bağlantı yazısı "← josephuz.com" olmalı');
-  assert.ok(cubuk.includes('Kontroller <kbd>F1</kbd>'), 'yardım düğmesi "Kontroller F1" olmalı (eski "Kısayollar" değil)');
+  // Yazılar sözlükte (dil standardı): Türkçesi aynen, İngilizcesi standart.
+  assert.ok(cubuk.includes('data-i18n-html="ust.kontroller"'), 'yardım düğmesi sözlükten yazılır');
+  assert.equal(tr['ust.kontroller'], 'Kontroller <kbd>F1</kbd>', 'yardım düğmesi "Kontroller F1" olmalı (eski "Kısayollar" değil)');
+  assert.equal(en['ust.kontroller'], 'Controls <kbd>F1</kbd>');
+  assert.ok(/<button id="dil" class="icon"><\/button>/.test(cubuk), 'dil düğmesi çubuğun sonunda, öbür düğmelerle aynı sınıfta');
   // Eski adlar bu çubukta kullanılmaz.
   for (const eski of ['Kısayollar', 'Nasıl oynanır', 'Ses açık', 'Ses kapalı']) {
     assert.ok(!cubuk.includes(eski), `üst çubukta "${eski}" kullanılmaz`);
@@ -63,8 +69,10 @@ test('STANDART üst araç çubuğu: dört düğme, bu sırayla, bu yazılarla', 
 
 test('ses ve müzik yazıları standart (iki nokta, küçük harf durum) ve iki menüde de aynı', () => {
   const main = oku('src/main.js');
-  assert.ok(/'Ses: ' \+ \(app\.soundOn \? 'açık' : 'kapalı'\)/.test(main), 'Ses yazısı "Ses: açık/kapalı" olmalı');
-  assert.ok(/'Müzik: ' \+ \(muzik\.acik \? 'açık' : 'kapalı'\)/.test(main), 'Müzik yazısı "Müzik: açık/kapalı" olmalı');
+  assert.ok(main.includes("t(app.soundOn ? 'ses.acik' : 'ses.kapali')"), 'Ses yazısı sözlükten');
+  assert.ok(main.includes("t(muzik.acik ? 'muzik.acik' : 'muzik.kapali')"), 'Müzik yazısı sözlükten');
+  assert.deepEqual([tr['ses.acik'], tr['ses.kapali']], ['Ses: açık', 'Ses: kapalı'], 'Ses yazısı "Ses: açık/kapalı" olmalı');
+  assert.deepEqual([tr['muzik.acik'], tr['muzik.kapali']], ['Müzik: açık', 'Müzik: kapalı'], 'Müzik yazısı "Müzik: açık/kapalı" olmalı');
   // syncMenu üst çubuğu ve Esc menüsünü birlikte yazar: ikisi aynı durumu gösterir.
   for (const sec of ['#sound', '#pauseSound', '#muzik', '#pauseMuzik']) {
     assert.ok(main.includes(`'${sec}'`), `syncMenu ${sec} düğmesini de tazelemeli`);
@@ -82,9 +90,10 @@ test('STANDART Esc menüsü: sıra DEVAM ET → · Kontroller F1 · Ses · Müzi
   assert.deepEqual(sira, ['resume', 'pauseHelp', 'pauseSound', 'pauseMuzik', 'quit'],
     'Esc menüsünün standart sırası');
   assert.ok(!screens.includes('type="range"'), 'Esc menüsünde müzik sesi sürgüsü olmamalı (ses düzeyi sabit)');
-  assert.ok(stack.includes('DEVAM ET →'), 'ilk düğme "DEVAM ET →"');
-  assert.ok(stack.includes('Kontroller <kbd>F1</kbd>'), 'ikinci düğme "Kontroller F1"');
-  assert.ok(stack.includes("josephuz.com'a dön"), 'son satır josephuz.com bağlantısı');
+  assert.ok(stack.includes("t('menu.devam')") && tr['menu.devam'] === 'DEVAM ET →', 'ilk düğme "DEVAM ET →"');
+  assert.ok(stack.includes("t('ust.kontroller')") && tr['ust.kontroller'] === 'Kontroller <kbd>F1</kbd>', 'ikinci düğme "Kontroller F1"');
+  assert.ok(stack.includes("t('menu.siteyeDon')") && tr['menu.siteyeDon'] === "josephuz.com'a dön", 'son satır josephuz.com bağlantısı');
+  assert.ok(!/id="dil"/.test(stack), 'Esc menüsünde dil düğmesi yok (yeniden yükleme maçı bozar)');
 });
 
 test('ses ve müzik tarayıcıda ayrı anahtarlarda saklanır, varsayılan müzik açık', () => {

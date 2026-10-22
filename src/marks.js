@@ -43,10 +43,10 @@ export function dropMark(world, id, reason) {
   world.marks.delete(id);
   if (reason === 'disguise') {
     world.ghosts.push({ ...circleOf(m, world.actors[id]), owner: m.owner, until: world.time + CFG.mapFade });
-    emit(world, 'İşaretlediğin kişi gözden kayboldu.', 'info', m.owner);
+    emit(world, 'isaretKayboldu', 'info', m.owner);
   }
   if (reason === 'replaced') {
-    emit(world, 'İşaretin başka bir dedektifin yeni işaretiyle kaldırıldı. Takibe devam et.', 'info', m.owner);
+    emit(world, 'isaretKaldirildi', 'info', m.owner);
     // Bot sahibi şüphesini kaybetmez: kendi işareti olmasa da o kişiyi izlemeyi sürdürür.
     const s = world.actors[m.owner].suspects.get(id);
     if (s) s.score = Math.max(s.score, world.level.markAt);
@@ -63,8 +63,8 @@ export function mark(world, a, b) {
   world.marks.set(b.id, { owner: a.id, ox: Math.cos(angle) * r, oz: Math.sin(angle) * r, cleared: false, time: world.time });
   // Yanlış işaretin bedeli tur sonunda yazılır: anında düşseydi işaretin doğru olup olmadığı tur içinde sızardı.
   if (b.role !== 'criminal') world.hidden[a.id] += CFG.scores.wrongMark;
-  emit(world, 'İşaret bırakıldı. Herkes bölgeyi görüyor; kasabadaki diğer işaretler kalktı.', 'clue', a.id);
-  if (b.role === 'criminal') emit(world, 'Biri seni işaretledi! Gözden kaybolup kılık değiştir.', 'danger', b.id);
+  emit(world, 'isaretBirakildi', 'clue', a.id);
+  if (b.role === 'criminal') emit(world, 'isaretlendin', 'danger', b.id);
   checkRights(world);
   return true;
 }
@@ -75,19 +75,19 @@ export function arrest(world, a, b) {
   world.effects.push({ type: 'arrest', x: b.x, z: b.z, t: 0.6 });
   // Her deneme savcıyı ele verir: suçlular onu bir süre görür.
   world.revealed.set(a.id, world.time + CFG.reveal);
-  emit(world, `Yakalama yaptın: ${CFG.reveal} sn boyunca suçlular seni görüyor.`, 'danger', a.id);
-  for (const c of criminals(world)) if (active(c)) emit(world, `Bir savcı kendini ele verdi! ${CFG.reveal} sn boyunca görünüyor.`, 'danger', c.id);
+  emit(world, 'yakalamaYaptin', 'danger', a.id, { sn: CFG.reveal });
+  for (const c of criminals(world)) if (active(c)) emit(world, 'savciEleVerdi', 'danger', c.id, { sn: CFG.reveal });
   const m = world.marks.get(b.id);
   if (b.role === 'criminal') {
     world.tally[a.id] += CFG.scores.catchBonus;
     if (m) world.tally[m.owner] += CFG.scores.markBonus;
-    emit(world, 'Doğru kişi! Bir suçlu yakalandı.', 'good', a.id);
-    for (const id of world.humans) if (id !== a.id) emit(world, 'Bir suçlu yakalandı.', 'good', id);
+    emit(world, 'dogruKisi', 'good', a.id);
+    for (const id of world.humans) if (id !== a.id) emit(world, 'sucluYakalandi', 'good', id);
     caughtNow(world, b);
   } else {
     world.tally[a.id] += CFG.scores.wrongCatch;
     if (m) m.cleared = true;
-    emit(world, 'Yanlış kişi (−1).', 'danger', a.id);
+    emit(world, 'yanlisKisi', 'danger', a.id);
   }
   checkRights(world);
   return true;

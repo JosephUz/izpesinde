@@ -17,7 +17,7 @@ const url = process.env.GAME_URL || 'http://127.0.0.1:5197';
 // Şu an oyunda müzik yok (src/muzik.js SAHNELER boş): Müzik düğmesi çubukta da Esc menüsünde de gizlidir, sıra
 // geri kalan düğmelerle denetlenir. Parçalar geri gelince düğme kendiliğinden döner, bu test de dörtlüyü bekler.
 if (!MUZIK_VAR) console.log('müzik yok: Müzik düğmesi beklenmiyor (çubuk ve Esc menüsü üç düğmeyle denetlenir)');
-const CUBUK_BEKLENEN = MUZIK_VAR ? ['homeLink', 'sound', 'muzik', 'helpBtn'] : ['homeLink', 'sound', 'helpBtn'];
+const CUBUK_BEKLENEN = MUZIK_VAR ? ['homeLink', 'sound', 'muzik', 'helpBtn', 'dil'] : ['homeLink', 'sound', 'helpBtn', 'dil'];
 const MENU_BEKLENEN = ['resume', 'pauseHelp', 'pauseSound', ...(MUZIK_VAR ? ['pauseMuzik'] : []), 'quit', "josephuz.com'a dön"];
 await mkdir('artifacts', { recursive: true });
 
@@ -49,7 +49,7 @@ const CUBUK_SATIR = `() => new Set([...document.querySelectorAll('#toptools > *'
 try {
   // 1) Ana ekran, dört ekran ölçüsü: standart dörtlü bu sırayla, tek satır, ekranın içinde, oyun adına binmiyor.
   for (const [ad, ekran, mobil] of EKRANLAR) {
-    const context = await browser.newContext({ viewport: ekran, isMobile: mobil, hasTouch: mobil, deviceScaleFactor: mobil ? 2 : 1 });
+    const context = await browser.newContext({ locale: 'tr-TR', viewport: ekran, isMobile: mobil, hasTouch: mobil, deviceScaleFactor: mobil ? 2 : 1 });
     const page = await context.newPage(), hatalar = [];
     page.on('pageerror', e => hatalar.push(e.message));
     page.on('console', e => { if (e.type() === 'error') hatalar.push(e.text()); });
@@ -79,7 +79,7 @@ try {
   // 2) Standart Esc menüsü dar yatay telefonda bütünüyle görünmeli: en alttaki "josephuz.com'a dön" kaydırmasız
   //    okunsun (menü bu görevde Müzik düğmesiyle uzadı) ve pencere düğme sütunu kadar dar kalsın.
   const [, DAR] = EKRANLAR[1];
-  const context = await browser.newContext({ viewport: DAR, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  const context = await browser.newContext({ locale: 'tr-TR', viewport: DAR, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   const page = await context.newPage(), hatalar = [];
   page.on('pageerror', e => hatalar.push(e.message));
   page.on('console', e => { if (e.type() === 'error') hatalar.push(e.text()); });
@@ -114,7 +114,7 @@ try {
   assert.deepEqual(hatalar, [], 'tarayıcı hataları: ' + hatalar.join(' | '));
 
   // 3) Masaüstünde Esc menüsü de aynı: pencere dar, sağ yarısı boş kalmıyor.
-  const mUst = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const mUst = await browser.newContext({ locale: 'tr-TR', viewport: { width: 1440, height: 900 } });
   const mPage = await mUst.newPage();
   await mPage.goto(url + '/?test=1&muzik=1');
   await mPage.waitForFunction(() => window.__iz);

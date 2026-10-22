@@ -3,7 +3,8 @@ import { createVisionFog } from './fog.js';
 import { createSonTakip, gosteriKipi } from './gosteri.js';
 import { createRoller } from './gosteri-roller.js';
 import { createCharacterView } from './characters.js';
-import { CAMERA, CFG } from './config.js';
+import { CAMERA, CFG, NAMES } from './config.js';
+import { DIL, dilDugmesi, dilUygula, t } from './dil.js';
 import { followPath, routine } from './crowd.js';
 import { buildEnvironmentView } from './environment.js';
 import { createInput } from './input.js';
@@ -36,6 +37,11 @@ import { createWorld, spectate, startRound, step } from './world.js';
  */
 export async function start(root) {
   const $ = s => root.querySelector(s), canvas = $('#world');
+  // Dil (josephuz/docs/dil-standardi.md): HTML'deki işaretli metinler, sayfa başlığı ve üst çubuğun sonundaki dil düğmesi.
+  dilUygula();
+  dilDugmesi($('#dil'));
+  /** Tek başına yarışmacıların adları: 0 oyuncunun kendisi, adı etkin dilde ("Sen" / "You"). */
+  const adlar = () => [t('ad.sen'), ...NAMES.slice(1)];
   // Telefon / tablet (Çayır Muhafızı'ndaki gibi): dokunmatik kontroller, kök tarayıcı çubuklarının bıraktığı görünür alana
   // kilitlenir (src/gorunur-alan.js, style.css → html.vv), kenar yumuşatma kapalı, piksel oranı 1, gölge haritası küçük.
   const touch = touchDevice();
@@ -86,7 +92,7 @@ export async function start(root) {
     return { x: app.left + (p.x * 0.5 + 0.5) * app.w, y: app.top + (-0.5 * p.y + 0.5) * app.h, inside: Math.abs(p.x) < 0.94 && Math.abs(p.y) < 0.88 };
   };
 
-  const kit = createMeshKit(), town = buildEnvironmentView(scene, app.world.env, kit);
+  const kit = createMeshKit(), town = buildEnvironmentView(scene, app.world.env, kit, k => t(k).toLocaleUpperCase(DIL === 'tr' ? 'tr' : 'en'));
   const characters = createCharacterView(scene, kit), effects = createEffectsView(scene, kit);
   const crates = createCrateView(scene, kit, app.world.env.crates.length);
   characters.reset(app.world);
@@ -104,7 +110,7 @@ export async function start(root) {
     },
     newMatch() {
       if (touch) enterFullscreen();
-      app.match = createWorld({ seed: Date.now(), level: app.level });
+      app.match = createWorld({ seed: Date.now(), level: app.level, names: adlar() });
       document.body.classList.add('playing');
       for (const id of ['#menu', '#scene-caption', '#menu-footer']) $(id).hidden = true;
       $('#hud').hidden = false; $('#scores').hidden = true;
@@ -153,7 +159,7 @@ export async function start(root) {
     },
     tab: down => (down ? screens.scoreToggle(true) : ($('#scores').hidden = true)),
     blur() { if (app.playing && !app.online && !app.paused && !app.world.result && !otopilot) screens.pauseMenu(); },
-    use() { if (app.playing && !app.paused) ui.toast(touch ? 'Önce dünyada birine dokunarak seç.' : 'İmlecin altında kimse yok.'); },
+    use() { if (app.playing && !app.paused) ui.toast(t(touch ? 'ipucu.dokunSec' : 'ipucu.imlecBos')); },
     map() { if (app.playing) minimap.toggle(); },
     pinch(scale, start) { if (start) pinchFrom = app.zoomPlay; else setZoom(pinchFrom / scale, true); },
     sound: type => ui.tone(type === 'use' ? 520 : 330, 0.08),
@@ -169,7 +175,7 @@ export async function start(root) {
   const networked = onlineEnabled();
   let pendingRoom = null;
   const ONLINE_BUTTONS = ['#quick', '#create', '#join'];
-  const defaultNick = () => `İzci-${Math.floor(1000 + Math.random() * 9000)}`;
+  const defaultNick = () => t('ana.varsayilanAd', { n: Math.floor(1000 + Math.random() * 9000) });
   /** Ad: en çok 16 harf, tarayıcıda hatırlanır (iz.nick); boşsa varsayılan ad yazılır. */
   const nick = () => {
     let v = $('#nick').value.trim().slice(0, 16);
@@ -198,7 +204,7 @@ export async function start(root) {
   function openLobby(l, error = '') { app.inLobby = true; showMenu(false); status(); roomUrl(l.code); screens.lobby(l, net.id, error); }
   /** Sunucuya bağlanılamazken üç düğme kapalı ve YAKINDA yazar, açık oda listesi gizlenir. */
   function setServer(on) {
-    for (const id of ONLINE_BUTTONS) { const b = $(id); b.disabled = !on; b.innerHTML = on ? b.dataset.label : 'YAKINDA'; }
+    for (const id of ONLINE_BUTTONS) { const b = $(id); b.disabled = !on; b.innerHTML = on ? b.dataset.label : t('oda.yakinda'); }
     if (!on) $('#join-row').hidden = true;
     screens.roomList(on ? net.rooms : null, on);
   }
@@ -211,7 +217,7 @@ export async function start(root) {
       // Sayfa yenilendi: sunucu oyundaki koltuğu token'la kendisi geri verir; lobideyse koda yeniden katılınır.
       else if (net.rememberedRoom()) {
         const code = net.rememberedRoom();
-        if (!net.lobby && !net.world) status('Odaya geri bağlanıyor…');
+        if (!net.lobby && !net.world) status(t('oda.geriBaglaniyor'));
         setTimeout(() => { if (!net.lobby && !net.world) net.join(code); }, 400);
       }
     },
@@ -221,11 +227,13 @@ export async function start(root) {
       if (l.state === 'lobby') openLobby(l);
     },
     onRound(world) { enterOnline(world); },
-    onError(msg) {
+    onError(mesaj, kod) {
+      // Sunucu hatası dil bağımsız kodla gelir (standart: t('sunucu.' + kod)); sözlükte yoksa sunucunun metni.
+      const anahtar = `sunucu.${kod}`, ceviri = kod ? t(anahtar) : '', msg = ceviri && ceviri !== anahtar ? ceviri : mesaj;
       if (app.inLobby && net.lobby) openLobby(net.lobby, msg);
       else { status(msg, true); net.forgetRoom(); roomUrl(null); }
     },
-    onOnline(n) { $('#online').textContent = n > 0 ? `● ${n} çevrim içi` : ''; },
+    onOnline(n) { $('#online').textContent = n > 0 ? t('ana.cevrimIciSayi', { n }) : ''; },
     onRooms(list) { screens.roomList(list, true); },
     onConnect() { setServer(true); },
     onDisconnect() { setServer(false); $('#online').textContent = ''; },
@@ -254,28 +262,28 @@ export async function start(root) {
   };
   for (const id of ONLINE_BUTTONS) $(id).dataset.label = $(id).innerHTML;
   // Hızlı katıl: sunucu en dolu açık odaya oturtur, yoksa bu oyuncuyla yeni herkese açık oda kurar.
-  $('#quick').onclick = () => goOnline({ quick: true }, 'Oda aranıyor…');
-  $('#create').onclick = () => goOnline({ create: true }, 'Oda kuruluyor…');
+  $('#quick').onclick = () => goOnline({ quick: true }, t('oda.araniyor'));
+  $('#create').onclick = () => goOnline({ create: true }, t('oda.kuruluyor'));
   $('#join').onclick = () => { $('#join-row').hidden = false; $('#code').focus(); };
   const joinCode = code => {
     code = normalizeCode(code);
-    if (code.replace(/[^A-Z]/g, '').length < 4) { status('Oda kodunu yaz', true); $('#join-row').hidden = false; $('#code').focus(); return; }
-    goOnline({ code }, 'Odaya bağlanıyor…');
+    if (code.replace(/[^A-Z]/g, '').length < 4) { status(t('oda.kodYaz'), true); $('#join-row').hidden = false; $('#code').focus(); return; }
+    goOnline({ code }, t('oda.baglaniyor'));
   };
   $('#joinGo').onclick = () => joinCode($('#code').value);
   $('#code').oninput = () => { const c = $('#code'), at = c.selectionStart; c.value = c.value.toLocaleUpperCase('tr'); c.setSelectionRange(at, at); };
   $('#code').onkeydown = e => { if (e.key === 'Enter') joinCode($('#code').value); e.stopPropagation(); };
   $('#nick').onkeydown = e => e.stopPropagation();
   // AÇIK ODALAR: satırın tamamı KATIL düğmesidir (dolu oda kapalı).
-  $('#roomList').onclick = e => { const b = e.target.closest('[data-room]'); if (b && !b.disabled) goOnline({ code: b.dataset.room }, 'Odaya bağlanıyor…'); };
+  $('#roomList').onclick = e => { const b = e.target.closest('[data-room]'); if (b && !b.disabled) goOnline({ code: b.dataset.room }, t('oda.baglaniyor')); };
   setServer(false);
   if (networked && !gosteri) {
     // Davet linki (?oda=KOD): bağlanır bağlanmaz odaya kendiliğinden girilir; sayfa yenilendiyse aynı koltuğa dönülür.
     const linked = normalizeCode(new URLSearchParams(location.search).get('oda') || '');
     if (linked) {
       $('#join-row').hidden = false; $('#code').value = linked;
-      if (net.rememberedRoom() === linked) status('Odaya geri bağlanıyor…');
-      else { pendingRoom = { code: linked }; status('Odaya bağlanıyor…'); }
+      if (net.rememberedRoom() === linked) status(t('oda.geriBaglaniyor'));
+      else { pendingRoom = { code: linked }; status(t('oda.baglaniyor')); }
     }
     net.connect(nick());
   } else $('#online-block').hidden = true;
@@ -291,8 +299,8 @@ export async function start(root) {
   // düğme de hem üst çubukta hem Esc menüsünde aynı durumu gösterir; durumlar tarayıcıda saklanır (iz.sound, iz.muzik).
   const muzik = createMuzik(root);
   try { app.soundOn = localStorage.getItem('iz.sound') === 'on'; } catch { /* yok */ }
-  const soundLabel = () => 'Ses: ' + (app.soundOn ? 'açık' : 'kapalı');
-  const muzikLabel = () => 'Müzik: ' + (muzik.acik ? 'açık' : 'kapalı');
+  const soundLabel = () => t(app.soundOn ? 'ses.acik' : 'ses.kapali');
+  const muzikLabel = () => t(muzik.acik ? 'muzik.acik' : 'muzik.kapali');
 
   /** Ses / müzik yazılarını iki yerde birden tazeler: üst çubuk ve (açıksa) Esc menüsü. */
   function syncMenu() {
@@ -337,7 +345,7 @@ export async function start(root) {
 
   // Otopilot: maç doğrudan başlar, oyuncunun karakterini bot oynar (bkz. yukarıdaki `otopilot`).
   function otoTur() {
-    if (!app.match || app.match.round >= CFG.rounds) app.match = createWorld({ seed: app.match ? Date.now() : otopilot.tohum, level: 'normal', humans: [] });
+    if (!app.match || app.match.round >= CFG.rounds) app.match = createWorld({ seed: app.match ? Date.now() : otopilot.tohum, level: 'normal', humans: [], names: adlar() });
     hooks.pick(otopilot.rol);
     screens.close();
   }
@@ -386,10 +394,7 @@ export async function start(root) {
    * ekranda bir açılır kart (#fate) belirir. Sonra izleyici kamerasına geçilir. Tur sonu ekranı sahne bitene kadar bekler.
    */
   const FATE = { hold: 3.4, card: 5.5, zoom: 11 };
-  const FATE_TEXT = {
-    caught: ['BU TUR SENİN İÇİN BİTTİ', 'Yakalandın', 'Bir savcı seni kalabalığın içinden çekip aldı. Turun sonuna kadar takım arkadaşını izleyebilirsin.'],
-    murder: ['BU TUR SENİN İÇİN BİTTİ', 'Öldürüldün', 'Kalabalıktaki suçlulardan biri seni buldu. Turun sonuna kadar takım arkadaşlarını izleyebilirsin.'],
-  };
+  const FATE_TEXT = kind => [t('kader.ust'), t(`kader.${kind}.baslik`), t(`kader.${kind}.yazi`)];
   let fateWorld = null, fateRound = 0, wasActive = null, fateHide = 0;
   app.fate = null;
 
@@ -417,9 +422,9 @@ export async function start(root) {
    */
   const END = { hold: 4.2, zoom: 13 };
   const END_TEXT = {
-    capture: ['law', 'KANUN KAZANDI', 'Son suçlu da yakalandı.'],
-    prosecutors: ['crime', 'SUÇLULAR KAZANDI', 'Son savcı da düştü.'],
-    timeout: ['crime', 'SUÇLULAR KAZANDI', 'Süre doldu, suçlular kalabalıkta kayboldu.'],
+    capture: ['law', 'bitis.law', 'bitis.capture'],
+    prosecutors: ['crime', 'bitis.crime', 'bitis.prosecutors'],
+    timeout: ['crime', 'bitis.crime', 'bitis.timeout'],
   };
   app.ending = null;
   function endingClear() { app.ending = null; app.endHold = false; const e = $('#ending'); if (e) { e.hidden = true; e.className = ''; } }
@@ -428,12 +433,12 @@ export async function start(root) {
     if (!world.result) { app.endHold = false; return false; }
     if (!app.ending) {
       const last = [...downs.values()].filter(d => time - d.at < 3).sort((a, b) => b.at - a.at)[0];
-      const [tone, title, text] = END_TEXT[world.result.kind] || ['crime', 'TUR BİTTİ', ''];
+      const [tone, title, text] = END_TEXT[world.result.kind] || ['crime', 'bitis.turBitti', ''];
       app.ending = { at: time, kind: world.result.kind, id: world.result.kind === 'timeout' ? null : last?.id ?? null };
       const e = $('#ending');
       e.className = tone; e.hidden = false;
-      e.querySelector('.eyebrow').textContent = `TUR ${world.round} BİTTİ`;
-      e.querySelector('h2').textContent = title; e.querySelector('p').textContent = text;
+      e.querySelector('.eyebrow').textContent = t('bitis.turNBitti', { n: world.round });
+      e.querySelector('h2').textContent = t(title); e.querySelector('p').textContent = text ? t(text) : '';
       ui.tone(tone === 'law' ? 660 : 150, 0.7);
     }
     app.ending.t = time - app.ending.at;
@@ -441,7 +446,7 @@ export async function start(root) {
     return !app.endHold && !app.fateHold;
   }
   function fateCard(kind) {
-    const card = $('#fate'), flash = $('#fateFlash'), [eyebrow, title, text] = FATE_TEXT[kind];
+    const card = $('#fate'), flash = $('#fateFlash'), [eyebrow, title, text] = FATE_TEXT(kind);
     card.className = kind; card.hidden = false;
     card.querySelector('.eyebrow').textContent = eyebrow; card.querySelector('h2').textContent = title; card.querySelector('p').textContent = text;
     card.querySelector('.fate-art').innerHTML = kind === 'caught' ? '<i></i>'.repeat(7) + '<b></b>' : '<i></i><b></b><b></b><b></b>';
@@ -531,7 +536,7 @@ export async function start(root) {
     } catch (e) {
       console.error(e);
       app.paused = true;
-      ui.toast('Beklenmedik hata. Sayfayı yenileyebilirsin.');
+      ui.toast(t('sayfa.hata'));
     }
     requestAnimationFrame(frame);
   }

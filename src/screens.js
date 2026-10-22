@@ -1,4 +1,5 @@
-import { BOT_NAMES, CFG, LEVELS, ROLE } from './config.js';
+import { BOT_NAMES, CFG, LEVELS } from './config.js';
+import { t } from './dil.js';
 import { active, contestants } from './roster.js';
 import { spectate } from './world.js';
 
@@ -10,23 +11,14 @@ import { spectate } from './world.js';
  * Çevrim içi odada oyun durmaz: menü açıkken yalnızca senin karakterin durur, tur girişi ve tur sonu sunucunun
  * saatiyle kapanır.
  */
-const OBJECTIVE = {
-  detective: 'Yalnızca dedektiflerin gördüğü izleri oku. Şüphelendiğini takip et, sol tıkla işaretle. İşaret sınırsız ama yanlışı −1; yeni işaret kasabadaki diğer işaretleri kaldırır.',
-  prosecutor: 'Savcı izlerini ve işaretleri takip et, doğru kişiyi sol tıkla yakala. Yakalama sınırsız ama yanlışı −1 ve her denemede kimliğin 10 sn suçlulara açılır.',
-  criminal: 'Süre bitene kadar yakalanma. Tenhada iz bırakırsın; işaretlenirsen imleçteki kişinin kılığına Q ile gir. Sol tık öldürür.',
-};
+// Metinler sözlükte (src/diller/*.js): rolün amacı `rol.amac.<rol>`, tuşları `rol.tus.<rol>`, tur sonu `son.<bitiş>.*`.
+const OBJECTIVE = role => t(`rol.amac.${role}`);
+const ROLE = role => t(`rol.${role}`);
+const LEVEL = level => (LEVELS[level] ? t(`zorluk.${level}`) : t('zorluk.normal'));
 const ICON = { detective: '⌕', prosecutor: '⚖', criminal: '◇' };
-export const KEYS = {
-  detective: 'Sol tık: İşaretle · E: Kutu taşı · F: Çalış',
-  prosecutor: 'Sol tık: Yakala · E: Kutu taşı · F: Çalış',
-  criminal: 'Sol tık: Öldür · Q: Kılık değiştir (−1) · E: Kutu · F: Çalış',
-};
-const ENDINGS = {
-  capture: ['Kaçacak yer kalmadı.', 'İki suçlu da yakalandı. Kanun tarafı kazandı.'],
-  timeout: ['Sır, kasabada kaldı.', 'Süre doldu. Serbest kalan suçlular kazandı.'],
-  prosecutors: ['Kanun sustu.', 'İki savcı da öldü. Suçlular kazandı.'],
-};
-export const objectiveOf = role => OBJECTIVE[role];
+export const KEYS = role => t(`rol.tus.${role}`);
+const ENDINGS = kind => [t(`son.${kind}.baslik`), t(`son.${kind}.yazi`)];
+export const objectiveOf = OBJECTIVE;
 const signed = n => (n > 0 ? '+' : '') + n;
 const pad = n => String(n).padStart(2, '0');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -50,9 +42,9 @@ export function createScreens(root, app, hooks) {
 
   function scoreTable(reveal) {
     const world = app.world, order = contestants(world).slice().sort((a, b) => world.scores[b.id] - world.scores[a.id]);
-    const head = `<tr><th>SIRA / KİŞİ</th>${reveal ? '<th>BU TUR</th>' : ''}${world.history.map((_, i) => `<th>T${i + 1}</th>`).join('')}<th>TOPLAM</th></tr>`;
+    const head = `<tr><th>${t('tablo.siraKisi')}</th>${reveal ? `<th>${t('tablo.buTur')}</th>` : ''}${world.history.map((_, i) => `<th>${t('tablo.tur', { n: i + 1 })}</th>`).join('')}<th>${t('tablo.toplam')}</th></tr>`;
     const me = world.player.id;
-    const rows = order.map((a, i) => `<tr class="${a.id === me ? 'you' : ''}"><td>${i + 1}. ${esc(a.name)}${a.id === me ? ' · SEN' : ''}</td>${reveal ? `<td>${ROLE[a.role]}</td>` : ''}${world.history.map(h => `<td>${h.points[a.id] ? signed(h.points[a.id]) : '—'}</td>`).join('')}<td><b>${world.scores[a.id]}</b></td></tr>`).join('');
+    const rows = order.map((a, i) => `<tr class="${a.id === me ? 'you' : ''}"><td>${i + 1}. ${esc(a.name)}${a.id === me ? t('tablo.sen') : ''}</td>${reveal ? `<td>${ROLE(a.role)}</td>` : ''}${world.history.map(h => `<td>${h.points[a.id] ? signed(h.points[a.id]) : '—'}</td>`).join('')}<td><b>${world.scores[a.id]}</b></td></tr>`).join('');
     return `<table><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
 
@@ -60,8 +52,8 @@ export function createScreens(root, app, hooks) {
   function roleChoice(round) {
     // Seçim modunda Esc ekranı kapatmaz: rol seçilmeden tur başlamaz.
     app.paused = true; app.choosing = true;
-    const card = role => `<button class="role-pick" data-role="${role}"><span class="role-icon">${ICON[role]}</span><b>${ROLE[role]}</b><small>${OBJECTIVE[role]}</small></button>`;
-    show(`<span class="eyebrow">KARAAĞAÇ DOSYALARI · TUR ${pad(round)} / ${pad(CFG.rounds)}</span><h2>Bu tur kim olacaksın?</h2><p>Kalan rolleri rakiplerin paylaşır. Puanın turlar boyunca birikir.</p><div class="role-picks">${['detective', 'prosecutor', 'criminal'].map(card).join('')}</div>`, "rol");
+    const card = role => `<button class="role-pick" data-role="${role}"><span class="role-icon">${ICON[role]}</span><b>${ROLE(role)}</b><small>${OBJECTIVE(role)}</small></button>`;
+    show(`<span class="eyebrow">${t('tur.dosyalar', { tur: pad(round), toplam: pad(CFG.rounds) })}</span><h2>${t('secim.baslik')}</h2><p>${t('secim.yazi')}</p><div class="role-picks">${['detective', 'prosecutor', 'criminal'].map(card).join('')}</div>`, "rol");
     overlay.querySelectorAll('[data-role]').forEach(b => { b.onclick = () => hooks.pick(b.dataset.role); });
   }
 
@@ -69,14 +61,14 @@ export function createScreens(root, app, hooks) {
     app.paused = true; app.spectator = 0;
     const world = app.world, p = world.player, known = [...p.known].map(id => esc(world.actors[id].name)).join(', ');
     const countdown = app.online ? `<p class="result-note" id="introLeft">${introLeft()}</p>` : '';
-    show(`<span class="eyebrow">KARAAĞAÇ DOSYALARI · TUR ${pad(world.round)} / ${pad(CFG.rounds)}</span><div class="role-icon">${ICON[p.role]}</div><h2>Bu tur ${{ detective: 'dedektifsin', prosecutor: 'savcısın', criminal: 'suçlusun' }[p.role]}.</h2><p>${OBJECTIVE[p.role]}</p><p>Tanıdığın kişiler: <strong>${known || 'Yok'}</strong>.<br>Bu kişiler dünyada yeşil bir halka ile görünür. Diğer herkes bir sır.</p><p class="result-note">${KEYS[p.role]}</p>${countdown}<div class="buttons"><button class="primary" id="beginRound">HİKÂYEYE KARIŞ →</button><button class="secondary" id="introHelp">Kontroller</button></div>`, "giris");
+    show(`<span class="eyebrow">${t('tur.dosyalar', { tur: pad(world.round), toplam: pad(CFG.rounds) })}</span><div class="role-icon">${ICON[p.role]}</div><h2>${t(`rol.busun.${p.role}`)}</h2><p>${OBJECTIVE(p.role)}</p><p>${t('giris.tanidik', { kisiler: known || t('giris.yok') })}</p><p class="result-note">${KEYS(p.role)}</p>${countdown}<div class="buttons"><button class="primary" id="beginRound">${t('giris.karis')}</button><button class="secondary" id="introHelp">${t('giris.kontroller')}</button></div>`, "giris");
     $('#beginRound').onclick = close;
     $('#introHelp').onclick = () => help(roundIntro);
   }
   /** Çevrim içi tur girişinin geri sayımı (sunucu saati; tur başlayınca giriş kendiliğinden kapanır). */
   function introLeft() {
     const w = app.world, left = Math.max(0, Math.ceil(w.left - (performance.now() - w.leftAt) / 1000));
-    return w.phase === 'intro' ? `Tur ${left} sn sonra başlıyor · rolün herkese rastgele dağıtıldı` : 'Tur başladı';
+    return w.phase === 'intro' ? t('giris.sayac', { n: left }) : t('giris.basladi');
   }
   /** Her kare: çevrim içi giriş ve tur sonu sayaçları; tur başlayınca giriş kapanır. */
   function tickOnline() {
@@ -85,14 +77,14 @@ export function createScreens(root, app, hooks) {
     const intro = overlay.querySelector('#introLeft');
     if (intro) { if (w.phase !== 'intro') close(); else intro.textContent = introLeft(); }
     const next = overlay.querySelector('#nextLeft');
-    if (next) next.textContent = `Sonraki tur ${Math.max(0, Math.ceil((w.nextAt - performance.now()) / 1000))} sn içinde başlıyor`;
+    if (next) next.textContent = t('sonuc.sonrakiSayac', { n: Math.max(0, Math.ceil((w.nextAt - performance.now()) / 1000)) });
   }
 
   function help(back = null) {
     const wasPaused = app.paused;
     app.paused = true;
-    const roles = app.online ? 'Çevrim içi odada rolün her tur rastgele gelir, puanların kalır.' : 'Beş tur boyunca rolünü sen seçersin, puanların kalır.';
-    show(`<span class="eyebrow">KASABADA HAYATTA KALMA REHBERİ</span><h2>Her adım bir iz.</h2><div class="controls"><div><kbd>W A S D</kbd> Hareket</div><div><kbd>SHIFT</kbd> Koş</div><div><kbd>SPACE</kbd> Çift zıpla</div><div><kbd>SAĞ TIK</kbd> Atıl</div><div><kbd>SOL TIK</kbd> Dedektif işaretler · Savcı yakalar · Suçlu öldürür</div><div><kbd>E</kbd> Kutuyu al / bırak</div><div><kbd>F</kbd> İş noktasında çalış</div><div><kbd>Q</kbd> Suçlu: imleçteki kişinin kılığı</div><div><kbd>M</kbd> Haritayı büyüt / küçült</div><div><kbd>TEKERLEK</kbd> Yaklaştır / uzaklaştır</div><div><kbd>TAB</kbd> Skor / izleyicide hedef</div><div><kbd>ESC</kbd> Duraklat</div></div>${app.touch ? '<div class="controls touch-help"><div><kbd>SOL YARI</kbd> Joystick · sonuna kadar it: koş</div><div><kbd>DOKUN</kbd> Dünyada hedef seç</div><div><kbd>BÜYÜK DÜĞME</kbd> Seçili hedefe rolün eylemi</div><div><kbd>KILIK</kbd> Suçlu: seçili kişinin kılığı (−1)</div><div><kbd>KUTU · ÇALIŞ</kbd> Kutu taşı · iş noktasında çalış</div><div><kbd>ZIPLA · ATIL</kbd> Çift zıpla · atıl</div><div><kbd>İKİ PARMAK</kbd> Yaklaştır / uzaklaştır</div><div><kbd>☰ · SKOR · HARİTA</kbd> Menü · basılı tut: skor · büyüt</div></div>' : ''}<p>Herkes yalnızca çevresindeki daireyi görür. Suçlular arkalarında iki saniye yerde kalan izler bırakır; izler başta 5 saniye arayla ve 5 saniye geriden düşer, tur ilerledikçe ikisi de kısalır. Dedektif izlerini yalnızca dedektifler, savcı izlerini yalnızca savcılar görür. İşaretleri herkes görür; işaretli suçlu kılık değiştirince işaret kalkar. Savcı her yakalamada 10 sn suçlulara görünür.</p><p>${roles} <b>Kazanmak için en yüksek kişisel skoru topla.</b></p><button class="primary" id="closeHelp">ANLADIM →</button>`, "yardim");
+    const roles = t(app.online ? 'yardim.rollerCevrimIci' : 'yardim.rollerTek');
+    show(`<span class="eyebrow">${t('yardim.ust')}</span><h2>${t('yardim.baslik')}</h2><div class="controls">${t('yardim.tuslar')}</div>${app.touch ? `<div class="controls touch-help">${t('yardim.dokunmatik')}</div>` : ''}<p>${t('yardim.kurallar')}</p><p>${roles} ${t('yardim.kazan')}</p><button class="primary" id="closeHelp">${t('yardim.anladim')}</button>`, "yardim");
     $('#closeHelp').onclick = () => {
       if (back) back();
       else { close(); app.paused = wasPaused; if (wasPaused && app.playing) pauseMenu(); }
@@ -109,13 +101,13 @@ export function createScreens(root, app, hooks) {
     if (!app.playing) return;
     app.paused = true;
     const head = app.online
-      ? '<span class="eyebrow">ÇEVRİM İÇİ ODA</span><h2>Kasaba durmuyor.</h2><p>Bu ekran açıkken karakterin yerinde durur. Odadan çıkarsan karakterini tur sonuna kadar bir bot yönetir.</p>'
-      : '<span class="eyebrow">ZAMAN SENİ BEKLİYOR</span><h2>Bir nefes arası.</h2><p>Kasaba duraklatıldı.</p>';
+      ? `<span class="eyebrow">${t('menu.cevrimIciUst')}</span><h2>${t('menu.cevrimIciBaslik')}</h2><p>${t('menu.cevrimIciYazi')}</p>`
+      : `<span class="eyebrow">${t('menu.ust')}</span><h2>${t('menu.baslik')}</h2><p>${t('menu.yazi')}</p>`;
     // Gösteri / otomatik tarayıcı kipinde müzik hiç kurulmaz (muzik.js muzikKapali): düğme menüye girmez.
     const muzik = hooks.muzikVar()
       ? `<button class="secondary" id="pauseMuzik">${hooks.muzikLabel()}</button>`
       : '';
-    show(`${head}<div class="menu-stack"><button class="primary" id="resume">DEVAM ET →</button><button class="secondary" id="pauseHelp">Kontroller <kbd>F1</kbd></button><button class="secondary" id="pauseSound">${hooks.soundLabel()}</button>${muzik}<button class="secondary" id="quit">${app.online ? 'Odadan çık' : 'Ana menü'}</button><a class="secondary" href="https://www.josephuz.com/">josephuz.com'a dön</a></div>`, 'mola');
+    show(`${head}<div class="menu-stack"><button class="primary" id="resume">${t('menu.devam')}</button><button class="secondary" id="pauseHelp">${t('ust.kontroller')}</button><button class="secondary" id="pauseSound">${hooks.soundLabel()}</button>${muzik}<button class="secondary" id="quit">${t(app.online ? 'oda.cik' : 'menu.anaMenu')}</button><a class="secondary" href="https://www.josephuz.com/">${t('menu.siteyeDon')}</a></div>`, 'mola');
     $('#pauseSound').onclick = () => hooks.toggleSound();
     if (hooks.muzikVar()) {
       $('#pauseMuzik').onclick = () => hooks.toggleMuzik();
@@ -129,13 +121,13 @@ export function createScreens(root, app, hooks) {
   function showResult() {
     if (app.shownResult) return;
     app.shownResult = true; app.paused = true;
-    const world = app.world, final = world.round === CFG.rounds, [title, desc] = ENDINGS[world.result.kind];
+    const world = app.world, final = world.round === CFG.rounds, [title, desc] = ENDINGS(world.result.kind);
     const max = Math.max(...world.scores), winners = contestants(world).filter(a => world.scores[a.id] === max).map(a => esc(a.name)).join(', ');
-    const note = final ? `${winners} · ${max} puan ${winners.includes(',') ? '· Ortak birincilik' : ''}` : `Bu tur ${signed(world.result.points[world.player.id])} puan · Toplam ${world.scores[world.player.id]}`;
+    const note = final ? t('son.kazananlar', { kazananlar: winners, puan: max }) + (winners.includes(',') ? ' ' + t('son.ortak') : '') : t('son.turNotu', { puan: signed(world.result.points[world.player.id]), toplam: world.scores[world.player.id] });
     // Çevrim içi: sonraki tur sunucunun saatiyle kendiliğinden başlar; maç sonunda oda lobiye döner.
-    const next = !app.online ? `<button class="primary" id="next">${final ? 'YENİ BİR HİKÂYE' : 'SONRAKİ TUR'} →</button>`
-      : final ? '<button class="primary" id="next">LOBİYE DÖN →</button><button class="secondary" id="quit">Odadan çık</button><a class="secondary" href="https://www.josephuz.com/">josephuz.com</a>' : '<p class="result-note" id="nextLeft"></p>';
-    show(`<span class="eyebrow">${final ? 'BEŞ DOSYA KAPANDI · MAÇ SONU' : 'DOSYA KAPANDI · TUR ' + world.round}</span><h2>${final ? 'Kasaba seni hatırlayacak.' : title}</h2><p>${desc}</p><p class="result-note">${note}</p>${scoreTable(true)}<div class="buttons">${next}</div>`, "sonuc");
+    const next = !app.online ? `<button class="primary" id="next">${t(final ? 'son.yeniHikaye' : 'son.sonrakiTur')}</button>`
+      : final ? `<button class="primary" id="next">${t('son.lobiyeDon')}</button><button class="secondary" id="quit">${t('oda.cik')}</button><a class="secondary" href="https://www.josephuz.com/">josephuz.com</a>` : '<p class="result-note" id="nextLeft"></p>';
+    show(`<span class="eyebrow">${final ? t('son.macUst') : t('son.turUst', { n: world.round })}</span><h2>${final ? t('son.macBaslik') : title}</h2><p>${desc}</p><p class="result-note">${note}</p>${scoreTable(true)}<div class="buttons">${next}</div>`, "sonuc");
     if (app.online) { tickOnline(); if (final) { $('#next').onclick = () => hooks.lobbyBack(); $('#quit').onclick = () => { overlay.hidden = true; hooks.quit(); }; } return; }
     $('#next').onclick = () => (final ? hooks.newMatch() : roleChoice(world.round + 1));
   }
@@ -146,7 +138,7 @@ export function createScreens(root, app, hooks) {
     const world = app.world;
     if (!active(world.player)) { if (on) { if (app.online) hooks.command('cycle'); else app.spectator = spectate(world, app.spectator, true)?.id || 0; } return; }
     scores.hidden = !on;
-    if (on) scores.innerHTML = '<div class="dialog"><span class="eyebrow">KİŞİSEL SIRALAMA · ROLLER GİZLİ</span><h2>Herkes kendi izinde.</h2>' + scoreTable(false) + '<p>Devam etmek için Tab tuşunu bırak.</p></div>';
+    if (on) scores.innerHTML = `<div class="dialog"><span class="eyebrow">${t('skor.ust')}</span><h2>${t('skor.baslik')}</h2>` + scoreTable(false) + `<p>${t('skor.yazi')}</p></div>`;
   }
 
   /**
@@ -161,16 +153,16 @@ export function createScreens(root, app, hooks) {
     if (lastLobby?.[0].code !== l.code || !l.seats.some(s => s && s.id === moveFrom)) moveFrom = null;
     lastLobby = [l, myId, error];
     const host = l.hostId === myId, link = location.origin + location.pathname + '?oda=' + l.code;
-    const tags = s => [s.id === l.hostId && 'kuran', s.id === myId && 'sen', !s.online && 'koptu'].filter(Boolean).join(' · ');
+    const tags = s => [s.id === l.hostId && t('oda.kuran'), s.id === myId && t('oda.sen'), !s.online && t('oda.koptu')].filter(Boolean).join(' · ');
     const seat = (s, i) => s
-      ? `<button class="seat${s.id === myId ? ' me' : ''}${s.online ? '' : ' offline'}${s.id === moveFrom ? ' moving' : ''}" data-seat="${i}" data-player="${s.id}" ${host ? 'draggable="true" title="Taşımak için sürükle ya da tıkla"' : 'disabled'}><small>${i + 1}</small><b>${esc(s.nick)}</b><span>${tags(s) || '&nbsp;'}</span></button>`
-      : `<button class="seat bot" data-seat="${i}" title="Buraya otur"><small>${i + 1}</small><b>${BOT_NAMES[i]}</b><span class="seat-tag">Bot · boş koltuk</span><span class="seat-sit">Buraya otur</span></button>`;
-    const levels = Object.entries(LEVELS).map(([k, v]) => `<button data-lobby-level="${k}" class="${k === l.level ? 'selected' : ''}" ${host ? '' : 'disabled'}>${v.label}</button>`).join('');
+      ? `<button class="seat${s.id === myId ? ' me' : ''}${s.online ? '' : ' offline'}${s.id === moveFrom ? ' moving' : ''}" data-seat="${i}" data-player="${s.id}" ${host ? `draggable="true" title="${t('oda.tasiBaslik')}"` : 'disabled'}><small>${i + 1}</small><b>${esc(s.nick)}</b><span>${tags(s) || '&nbsp;'}</span></button>`
+      : `<button class="seat bot" data-seat="${i}" title="${t('oda.buraya')}"><small>${i + 1}</small><b>${BOT_NAMES[i]}</b><span class="seat-tag">${t('oda.botBos')}</span><span class="seat-sit">${t('oda.buraya')}</span></button>`;
+    const levels = Object.keys(LEVELS).map(k => `<button data-lobby-level="${k}" class="${k === l.level ? 'selected' : ''}" ${host ? '' : 'disabled'}>${LEVEL(k)}</button>`).join('');
     const humans = l.seats.filter(Boolean).length;
-    const privacy = [[false, 'Herkese açık'], [true, 'Özel']].map(([v, t]) => `<button data-lobby-private="${v ? 1 : 0}" class="${Boolean(l.private) === v ? 'selected' : ''}" ${host ? '' : 'disabled'}>${t}</button>`).join('');
-    const visibility = l.private ? 'ÖZEL ODA · yalnız kodla' : 'AÇIK ODA · listede görünür';
-    const hint = moveFrom != null ? 'Taşınacak koltuğa tıkla' : host ? 'Oyuncuyu sürükleyip başka koltuğa bırak ya da önce oyuncuya, sonra koltuğa tıkla.' : 'Boş bir koltuğa tıklayıp oraya geçebilirsin.';
-    show(`<span class="eyebrow">ODA · ${LEVELS[l.level]?.label || 'Normal'} botlar</span><div class="room-head"><h2 class="room-code">${l.code}</h2><button class="secondary" id="roomLink">Linki kopyala</button></div><p class="room-visibility">${visibility}</p><p>Taraf yok: herkes her tur rastgele rol alır. Boş koltukları botlar doldurur.</p><div class="seats">${l.seats.map(seat).join('')}</div><p class="privacy-note" id="lobbyHint">${hint}</p><div class="lobby-opts"><div><span class="eyebrow">BOTLARIN ZORLUĞU</span><div class="lobby-levels">${levels}</div></div><div><span class="eyebrow">ODA</span><div class="lobby-levels">${privacy}</div></div></div>${error ? `<p class="lobby-error">${esc(error)}</p>` : ''}<p class="result-note">${humans} insan · ${10 - humans} bot · beş tur</p><div class="buttons">${host ? '<button class="primary" id="roomStart">MAÇI BAŞLAT <span>↗</span></button>' : '<button class="primary" disabled>Kuranın başlatması bekleniyor</button>'}<button class="secondary" id="roomLeave">Odadan çık</button></div>`, "lobi");
+    const privacy = [[false, t('oda.herkeseAcik')], [true, t('oda.ozel')]].map(([v, yazi]) => `<button data-lobby-private="${v ? 1 : 0}" class="${Boolean(l.private) === v ? 'selected' : ''}" ${host ? '' : 'disabled'}>${yazi}</button>`).join('');
+    const visibility = t(l.private ? 'oda.ozelGorunur' : 'oda.acikGorunur');
+    const hint = t(moveFrom != null ? 'oda.tasinacak' : host ? 'oda.kuranIpucu' : 'oda.ipucu');
+    show(`<span class="eyebrow">${t('oda.ust', { zorluk: LEVEL(l.level) })}</span><div class="room-head"><h2 class="room-code">${l.code}</h2><button class="secondary" id="roomLink">${t('oda.linkKopyala')}</button></div><p class="room-visibility">${visibility}</p><p>${t('oda.tarafYok')}</p><div class="seats">${l.seats.map(seat).join('')}</div><p class="privacy-note" id="lobbyHint">${hint}</p><div class="lobby-opts"><div><span class="eyebrow">${t('oda.zorluk')}</span><div class="lobby-levels">${levels}</div></div><div><span class="eyebrow">${t('oda.oda')}</span><div class="lobby-levels">${privacy}</div></div></div>${error ? `<p class="lobby-error">${esc(error)}</p>` : ''}<p class="result-note">${t('oda.sayilar', { insan: humans, bot: 10 - humans })}</p><div class="buttons">${host ? `<button class="primary" id="roomStart">${t('oda.baslat')}</button>` : `<button class="primary" disabled>${t('oda.bekleniyor')}</button>`}<button class="secondary" id="roomLeave">${t('oda.cik')}</button></div>`, "lobi");
     const again = () => lobby(...lastLobby);
     const target = seatNo => {
       if (moveFrom != null) { const id = moveFrom; moveFrom = null; hooks.move(id, seatNo); again(); }
@@ -198,7 +190,7 @@ export function createScreens(root, app, hooks) {
     if (host) $('#roomStart').onclick = () => hooks.startRoom();
     $('#roomLink').onclick = () => {
       const b = $('#roomLink');
-      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(() => { b.textContent = 'Link kopyalandı'; }, () => { b.textContent = link; });
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(() => { b.textContent = t('oda.linkKopyalandi'); }, () => { b.textContent = link; });
       else b.textContent = link;
     };
     $('#roomLeave').onclick = () => { moveFrom = null; hooks.leaveRoom(); };
@@ -212,8 +204,8 @@ export function createScreens(root, app, hooks) {
     let level = 'normal';
     try { level = localStorage.getItem('iz.level') || 'normal'; } catch { /* yok */ }
     if (!LEVELS[level]) level = 'normal';
-    const pick = Object.entries(LEVELS).map(([k, v]) => `<button data-setup-level="${k}" class="${k === level ? 'selected' : ''}">${v.label}</button>`).join('');
-    show(`<span class="eyebrow">TEK BAŞINA · 9 BOT</span><h2>Kasabaya hazırlan</h2><p>Rolünü her tur sen seçersin; kalan rolleri botlar paylaşır. Beş tur, en yüksek kişisel skor kazanır.</p><span class="eyebrow">BOTLARIN ZORLUĞU</span><div class="lobby-levels setup-levels">${pick}</div><div class="buttons"><button class="primary" id="setupGo">KASABAYA GİR →</button><button class="secondary" id="setupBack">Geri</button></div>`, "hazirlik");
+    const pick = Object.keys(LEVELS).map(k => `<button data-setup-level="${k}" class="${k === level ? 'selected' : ''}">${LEVEL(k)}</button>`).join('');
+    show(`<span class="eyebrow">${t('kurulum.ust')}</span><h2>${t('kurulum.baslik')}</h2><p>${t('kurulum.yazi')}</p><span class="eyebrow">${t('oda.zorluk')}</span><div class="lobby-levels setup-levels">${pick}</div><div class="buttons"><button class="primary" id="setupGo">${t('kurulum.gir')}</button><button class="secondary" id="setupBack">${t('kurulum.geri')}</button></div>`, "hazirlik");
     overlay.querySelectorAll('[data-setup-level]').forEach(b => {
       b.onclick = () => { level = b.dataset.setupLevel; overlay.querySelectorAll('[data-setup-level]').forEach(x => x.classList.toggle('selected', x === b)); };
     });
@@ -232,11 +224,11 @@ export function createScreens(root, app, hooks) {
     block.hidden = !connected;
     if (!connected) return;
     $('#roomsCount').textContent = list ? list.length : 0;
-    if (!list) { box.innerHTML = '<div class="room-empty">Odalar yükleniyor…</div>'; return; }
-    if (!list.length) { box.innerHTML = '<div class="room-empty">Şu an açık oda yok. Hızlı katıl yeni bir oda kurar.</div>'; return; }
+    if (!list) { box.innerHTML = `<div class="room-empty">${t('oda.yukleniyor')}</div>`; return; }
+    if (!list.length) { box.innerHTML = `<div class="room-empty">${t('oda.yok')}</div>`; return; }
     box.innerHTML = list.map(r => {
       const full = r.n >= 10;
-      return `<button class="room-row" data-room="${esc(r.code)}" ${full ? 'disabled' : ''}><span class="room-name"><b>${esc(r.host || 'Adsız oda')}</b><small>${LEVELS[r.level]?.label || 'Normal'} botlar · ${r.n}/10 oyuncu</small></span><span class="room-tag">LOBİDE</span><span class="room-go">${full ? 'DOLU' : 'KATIL →'}</span></button>`;
+      return `<button class="room-row" data-room="${esc(r.code)}" ${full ? 'disabled' : ''}><span class="room-name"><b>${esc(r.host || t('oda.adsiz'))}</b><small>${t('oda.satir', { zorluk: LEVEL(r.level), n: r.n })}</small></span><span class="room-tag">${t('oda.lobide')}</span><span class="room-go">${t(full ? 'oda.dolu' : 'oda.katilOk')}</span></button>`;
     }).join('');
   }
 

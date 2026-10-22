@@ -1,6 +1,5 @@
 import { CFG } from './config.js';
 import { setGoal } from './crowd.js';
-import { REGIONS } from './environment.js';
 import { dist, safe } from './physics.js';
 import { emit } from './roster.js';
 import { createWorld, startRound } from './world.js';
@@ -77,7 +76,7 @@ function izNoktasi(a, geri) {
 export function createSonTakip(K = SON_TAKIP) {
   const world = createWorld({ seed: K.seed, level: 'normal', humans: [0] });
   startRound(world, 'prosecutor');
-  const savci = world.actors[0], suclu = world.actors[K.suclu], koru = REGIONS[2];
+  const savci = world.actors[0], suclu = world.actors[K.suclu];
 
   // Roller sahnenin istediği gibi sabitlenir; tanıdıklar (suçlular birbirini, kanun savcıları tanır) yeniden kurulur.
   world.actors.slice(0, 10).forEach((a, i) => { a.role = K.roller[i]; a.known = new Set(); a.suspects = new Map(); a.path = []; a.goal = null; });
@@ -107,8 +106,8 @@ export function createSonTakip(K = SON_TAKIP) {
     .forEach((a, i) => Object.assign(a, safe(world.env, ...(K.dedektifler[i] || [0, 0]))));
 
   world.events = [];
-  emit(world, `Son 30 saniye: izler sıklaştı. İkinci suçlu ${koru.name.toLocaleLowerCase('tr')}nda.`, 'clue');
-  emit(world, 'Birinci suçlu yakalandı. Bir savcı ve dört dedektif öldürüldü.', 'danger');
+  emit(world, 'gosteriSon30', 'clue');
+  emit(world, 'gosteriDurum', 'danger');
 
   // Sahnenin saati ayrı tutulur: yakalamayla tur biter, `world.time` donar ama kafes ile tur sonu ekranı sonra gelir.
   let saniye = 0, yakalandiAt = 0, cozuldu = false;

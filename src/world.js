@@ -46,7 +46,7 @@ export function startRound(world, role = null) {
     const region = Math.floor(world.random() * REGIONS.length), spread = id < 10 ? 34 : 22, r = REGIONS[region];
     const p = safe(world.env, r.x + (world.random() - 0.5) * spread, r.z + (world.random() - 0.5) * spread);
     return {
-      id, name: (id < 10 && world.names[id]) || 'Kasabalı', role: roles[id] || 'civilian', ...p, y: 0, vy: 0, jumps: 0,
+      id, name: (id < 10 && world.names[id]) || '', role: roles[id] || 'civilian', ...p, y: 0, vy: 0, jumps: 0,
       appearance: Math.floor(world.random() * 10), hat: Math.floor(world.random() * 3),
       alive: true, caught: false, caughtAt: null, facing: 0, speed: 0, dashCd: 0, disguiseCd: 0, killCd: 0, dash: 0,
       action: null, crate: null, carry: false, seenMarks: new Set(),
@@ -62,7 +62,7 @@ export function startRound(world, role = null) {
   }
   world.crates = world.env.crates.map(c => ({ ...c, carrier: null }));
   world.player = world.actors[0];
-  emit(world, 'Suç çoktan işlendi. Suçlular kalabalığın içinde.', 'crime');
+  emit(world, 'basla', 'crime');
   return true;
 }
 

@@ -9,21 +9,23 @@ import { createSeeThrough, seeThrough } from './view/seethrough.js';
  * Karaağaç kasabası: beş bölge, yollar, binalar, korular, kaya ocağı, iş noktaları ve taşınabilir kutular.
  * computeEnvironment yalnızca veri üretir (simülasyon, testler); buildEnvironmentView aynı veriden 3B sahneyi kurar.
  * Yerleşim ilk haritanın koordinatlarıyla yazılıp CFG.scale ile büyütülür; boyutlar (bina, ağaç) büyütülmez.
+ * Bölgelerin adları, kısa adları ve iş yazıları sözlüktedir (dil standardı): `bolge.<id>`, `bolgeKisa.<id>`, `is.<id>`.
+ * İş noktasının `job` alanı bölge kimliğidir.
  */
 const S = CFG.scale;
 export const REGIONS = [
-  { name: 'Pazar meydanı', short: 'PAZAR', x: 0, z: 0, job: 'Alışveriş yapıyor' },
-  { name: 'Altınbaş tarlaları', short: 'TARLA', x: -33 * S, z: 23 * S, job: 'Hasat yapıyor' },
-  { name: 'Kuzey korusu', short: 'KORU', x: -33 * S, z: -30 * S, job: 'Odun kesiyor' },
-  { name: 'Taş ocağı', short: 'MADEN', x: 36 * S, z: -25 * S, job: 'Cevher çıkarıyor' },
-  { name: 'Eski değirmen', short: 'DEĞİRMEN', x: 31 * S, z: 27 * S, job: 'Çuval taşıyor' },
+  { id: 'pazar', x: 0, z: 0 },
+  { id: 'tarla', x: -33 * S, z: 23 * S },
+  { id: 'koru', x: -33 * S, z: -30 * S },
+  { id: 'ocak', x: 36 * S, z: -25 * S },
+  { id: 'degirmen', x: 31 * S, z: 27 * S },
 ];
 
 export function computeEnvironment() {
   const random = rng(718), buildings = [], trees = [], rocks = [], work = [];
   const add = (x, z, w, d, h, kind) => buildings.push({ x: x * S, z: z * S, w, d, h, kind });
   add(-14, -13, 8, 7, 7, 'han'); add(13, -15, 7, 8, 6, 'ev'); add(-16, 13, 7, 6, 5, 'ev'); add(17, 12, 6, 6, 5, 'ev');
-  add(32, 34, 8, 8, 10, 'değirmen'); add(-44, 14, 8, 6, 5, 'depo'); add(44, -35, 8, 6, 5, 'depo'); add(-47, -18, 7, 6, 5, 'ev');
+  add(32, 34, 8, 8, 10, 'degirmen'); add(-44, 14, 8, 6, 5, 'depo'); add(44, -35, 8, 6, 5, 'depo'); add(-47, -18, 7, 6, 5, 'ev');
   add(1, -34, 8, 7, 7, 'ev'); add(4, 34, 7, 6, 5, 'ev');
   // Uzayan yollar boyunca ek evler: bölgeler arasında saklanacak yer.
   add(-24, -2, 6, 5, 5, 'ev'); add(23, -3, 6, 6, 5, 'ev'); add(-8, 24, 6, 5, 5, 'ev'); add(14, -28, 6, 5, 5, 'ev');
@@ -44,7 +46,7 @@ export function computeEnvironment() {
   for (let i = 0; i < 5; i++) {
     for (let j = 0; j < 9; j++) {
       const r = REGIONS[i];
-      work.push({ x: r.x + (j % 3 - 1) * 5, z: r.z + (Math.floor(j / 3) - 1) * 5, region: i, job: r.job });
+      work.push({ x: r.x + (j % 3 - 1) * 5, z: r.z + (Math.floor(j / 3) - 1) * 5, region: i, job: r.id });
     }
   }
   // Kutular taşınabildiği için engel değildir: her bölgenin yanında bir yığın, her deponun önünde bir sıra.
@@ -67,9 +69,10 @@ const colors = { grass: '#66846b', path: '#b8a887', wood: '#62533d', roof: '#627
  * Durağan kasabayı sahneye kurar ve birleştirir. Karakterleri saklayabilecek sabit nesneler (evler, ağaçlar, kayalar,
  * tezgâhlar, kuyu) ayrı bir malzeme takımıyla kurulur ve tek tek kaydedilir: arkalarına biri geçince saydamlaşırlar
  * (bkz. view/seethrough.js). Zemin, yol ve alçak çitler katı kalır. Döner: değirmen kanatları (döner), tabelalar
- * (sprite; görüş alanı dışında gizlenir) ve saydamlık denetleyicisi.
+ * (sprite; görüş alanı dışında gizlenir) ve saydamlık denetleyicisi. `yazi(anahtar)` tabela metnini verir (büyük harfle,
+ * etkin dilde; main.js sözlükten çevirir): bu dosya sunucuda da yüklendiği için sözlüğü kendisi içe aktarmaz.
  */
-export function buildEnvironmentView(scene, env, kit) {
+export function buildEnvironmentView(scene, env, kit, yazi = k => k) {
   const H = CFG.half, windmills = [], signs = [], see = createMeshKit(kit), xray = createSeeThrough();
   // Saydamlaşabilir nesne: kendi grubunda kurulur, kaydedilir (birleştirmede numarası köşelere geçer).
   const object = build => { const g = new T.Group(); scene.add(g); build(g); xray.register(g); return g; };
@@ -79,12 +82,12 @@ export function buildEnvironmentView(scene, env, kit) {
     p.rotation.y = Math.atan2(dx, dz);
   };
   // Sprite gölgelendiricisinde `transformed` yok: tabelalar görüş sisinden çıkarılır, görüş dışında gizlenir.
-  const sign = (x, z, text) => {
+  const sign = (x, z, anahtar) => {
     const c = document.createElement('canvas'); c.width = 512; c.height = 80;
     const ctx = c.getContext('2d');
     ctx.fillStyle = '#172b22'; ctx.fillRect(0, 0, 512, 80);
     ctx.strokeStyle = '#b8a473'; ctx.strokeRect(5, 5, 502, 70);
-    ctx.fillStyle = '#e0d5af'; ctx.font = '27px Georgia'; ctx.textAlign = 'center'; ctx.fillText(text.toLocaleUpperCase('tr'), 256, 50);
+    ctx.fillStyle = '#e0d5af'; ctx.font = '27px Georgia'; ctx.textAlign = 'center'; ctx.fillText(yazi(anahtar), 256, 50);
     const tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
     const sprite = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, opacity: 0.8, fog: false }));
     sprite.position.set(x, 4, z); sprite.scale.set(8, 1.25, 1);
@@ -93,7 +96,7 @@ export function buildEnvironmentView(scene, env, kit) {
 
   ground(0, 0, H * 2 + 12, H * 2 + 12, colors.grass, -0.1);
   kit.mesh(scene, new T.CylinderGeometry(14, 14, 0.13, 12), colors.path, 0, 0, 0);
-  for (const r of REGIONS.slice(1)) { road(REGIONS[0], r, 5); ground(r.x, r.z, 18, 18, r.name.includes('tarlaları') ? '#988b5b' : colors.path, 0.04); }
+  for (const r of REGIONS.slice(1)) { road(REGIONS[0], r, 5); ground(r.x, r.z, 18, 18, r.id === 'tarla' ? '#988b5b' : colors.path, 0.04); }
   for (const [a, b] of [[1, 2], [2, 3], [3, 4], [4, 1]]) road(REGIONS[a], REGIONS[b], 3);
 
   // Dere ve iki küçük köprü kasabayı çerçeveler, yolları kesmez.
@@ -136,7 +139,7 @@ export function buildEnvironmentView(scene, env, kit) {
     see.box(g, colors.wood, 0, 4, 0, 4, 0.25, 0.3); see.box(g, '#a29670', 0, 2.6, 0, 0.05, 2.5, 0.05);
   });
 
-  for (const r of REGIONS) sign(r.x - 6, r.z - 3, r.name);
+  for (const r of REGIONS) sign(r.x - 6, r.z - 3, 'bolge.' + r.id);
   const grove = REGIONS[2];
   for (let i = 0; i < 8; i++) { const log = kit.mesh(scene, kit.cylinderGeo, '#806c47', grove.x - 3 + (i % 4) * 1.05, 0.6 + Math.floor(i / 4) * 0.7, grove.z + 2, 0.5, 4, 0.5); log.rotation.z = Math.PI / 2; }
   for (const [x, z] of [[-9, 3], [9, -2], [-24, 15], [26, 19], [-21, -21], [25, -22], [-45, 0], [0, -45], [45, 5], [0, 45]]) {
@@ -172,11 +175,11 @@ function building(parent, kit, solidKit, b, windmills, sign) {
   ];
   const roofGeo = new T.BufferGeometry();
   roofGeo.setAttribute('position', new T.Float32BufferAttribute(vertices, 3)); roofGeo.computeVertexNormals();
-  const roofMat = kit.material(b.kind === 'han' ? '#985e48' : b.kind === 'değirmen' ? '#b39665' : colors.roof);
+  const roofMat = kit.material(b.kind === 'han' ? '#985e48' : b.kind === 'degirmen' ? '#b39665' : colors.roof);
   const roof = new T.Mesh(roofGeo, roofMat); roof.castShadow = true; roof.receiveShadow = true; g.add(roof);
   kit.box(g, '#8d8771', w * 0.28, h, 0, 0.9, h * 0.7, 1);
-  if (b.kind === 'han') { kit.box(g, '#314e43', -w * 0.38, 2.2, d / 2 + 0.4, 1.3, 1.2, 0.2); sign(b.x, b.z + d / 2 + 1, 'GEYİKLİ HAN'); }
-  if (b.kind === 'değirmen') {
+  if (b.kind === 'han') { kit.box(g, '#314e43', -w * 0.38, 2.2, d / 2 + 0.4, 1.3, 1.2, 0.2); sign(b.x, b.z + d / 2 + 1, 'tabela.han'); }
+  if (b.kind === 'degirmen') {
     const blades = new T.Group(); blades.position.set(0, h * 0.78, d / 2 + 1.1); g.add(blades);
     for (let i = 0; i < 4; i++) {
       const arm = new T.Group(); arm.rotation.z = i * Math.PI / 2;

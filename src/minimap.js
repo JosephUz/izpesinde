@@ -1,4 +1,5 @@
 import { CFG } from './config.js';
+import { t } from './dil.js';
 import { REGIONS } from './environment.js';
 import { circleOf, marksFor, revealedProsecutors } from './marks.js';
 import { dist } from './physics.js';
@@ -44,7 +45,7 @@ export function createMinimap(canvas, card, app, regionLabel) {
       ctx.fillStyle = '#42654c';
       for (const t of env.trees) { circle(t.x, t.z, 1.5 * k); ctx.fill(); }
       ctx.font = `${8 * k}px Segoe UI`; ctx.textAlign = 'center'; ctx.fillStyle = '#c0c5a2';
-      for (const r of REGIONS) ctx.fillText(r.short, px(r.x), pz(r.z) - 12 * k);
+      for (const r of REGIONS) ctx.fillText(t(`bolgeKisa.${r.id}`), px(r.x), pz(r.z) - 12 * k);
 
       ctx.fillStyle = '#e6dfc2b0';
       const dot = 2 * k;
@@ -68,7 +69,8 @@ export function createMinimap(canvas, card, app, regionLabel) {
       const p = spectate(world, app.spectator) || viewer;
       ctx.fillStyle = '#fff0c5'; circle(p.x, p.z, 3 * k); ctx.fill();
       ctx.strokeStyle = '#fff0c540'; circle(p.x, p.z, CFG.vision * s); ctx.stroke();
-      regionLabel.textContent = REGIONS.slice().sort((a, b) => dist(p, a) - dist(p, b))[0].name;
+      const yakin = REGIONS.slice().sort((a, b) => dist(p, a) - dist(p, b))[0].id, bolge = t(`bolge.${yakin}`);
+      if (regionLabel.textContent !== bolge) regionLabel.textContent = bolge;
     },
   };
 }

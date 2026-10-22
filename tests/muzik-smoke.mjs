@@ -19,7 +19,7 @@ await mkdir('artifacts', { recursive: true });
 if (!MUZIK_VAR) {
   const browser = await chromium.launch({ headless: true, args: ['--mute-audio', '--use-gl=angle', '--use-angle=d3d11', '--ignore-gpu-blocklist'] });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } }), errors = [], istekler = [];
+    const page = await browser.newPage({ locale: 'tr-TR', viewport: { width: 1440, height: 900 } }), errors = [], istekler = [];
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', e => { if (e.type() === 'error') errors.push(e.text()); });
     page.on('request', r => { if (/\/muzik\/.+\.mp3/.test(r.url())) istekler.push(r.url()); });
@@ -59,7 +59,7 @@ const SESLER = () => [...document.querySelectorAll('audio')].map(a => ({
 }));
 
 try {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({ locale: 'tr-TR', viewport: { width: 1440, height: 900 } });
   const page = await context.newPage(), errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', e => { if (e.type() === 'error') errors.push(e.text()); });

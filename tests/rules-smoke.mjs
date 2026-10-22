@@ -17,6 +17,7 @@ import { traceEvery, traceLag } from '../src/traces.js';
 import { createWorld, spectate, startRound, step } from '../src/world.js';
 import { SON_TAKIP, createSonTakip } from '../src/gosteri.js';
 import { ROLLER, YAZILAR, createRoller } from '../src/gosteri-roller.js';
+import tr from '../src/diller/tr.js';
 
 const S = CFG.scores;
 const setup = (role = null) => {
@@ -52,7 +53,7 @@ test('Yarışmacılar pazarda toplu başlamaz, kalabalık büyüktür, suç zate
   const w = createWorld({ seed: 3 }); startRound(w);
   assert.equal(w.actors.length, 10 + CFG.crowd);
   assert.ok(contestants(w).filter(a => dist(a, REGIONS[0]) < 20).length < 10);
-  assert.ok(w.events.some(e => e.text.includes('Suç çoktan işlendi')));
+  assert.ok(w.events.some(e => e.kod === 'basla'));
 });
 
 test('İz aralığı 5 → 4 → 3 → 2 sn, gecikme 5 → 4 → 3 → 2 → 1 sn (2–3 dk 3, 3–5 dk 2, son dakika 1)', () => {
@@ -112,7 +113,7 @@ test('Başka dedektif aynı kişiyi işaretlerse eski sahibine uyarı gider', ()
   const w = setup('detective'), c = role(w, 'criminal')[0], other = role(w, 'detective').find(d => d !== w.player);
   assert.ok(mark(w, w.player, c)); assert.ok(mark(w, other, c));
   assert.equal(w.marks.get(c.id).owner, other.id);
-  assert.ok(w.events.some(e => e.text.includes('başka bir dedektifin yeni işaretiyle kaldırıldı')));
+  assert.ok(w.events.some(e => e.kod === 'isaretKaldirildi'));
 });
 
 test('Yanlış işaret tur sonunda −1 yazılır ve haritada kalır', () => {
@@ -393,6 +394,6 @@ test('Üç rol gösterisi (?gosteri=roller): kamera rolleri dolaşır, kılık /
   assert.equal(yazilar.size, YAZILAR.length, 'bütün direktif yazıları ekrana gelir');
   assert.ok(tekYazi, 'aynı anda tek yazı görünür');
   assert.ok(YAZILAR.every(([a, b]) => b - a >= 1.5), 'her yazı en az 1,5 sn kalır');
-  const tuslu = YAZILAR.map(([, , s]) => s).filter(s => /^(Sol tık|Q|SHIFT|E|F):/.test(s));
+  const tuslu = YAZILAR.map(([, , k]) => tr[k]).filter(s => /^(Sol tık|Q|SHIFT|E|F):/.test(s));
   assert.ok(tuslu.length >= 4, 'yazılar oyunun gerçek tuşlarını kullanır');
 });

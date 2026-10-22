@@ -24,7 +24,7 @@ export const S2C = {
   WELCOME: 'welcome',   // { id, token, nick }
   LOBBY: 'lobby',       // { code, hostId, level, state, private, seats: [{ seat, id, nick, online } | null] }
   ROOMS: 'rooms',       // { rooms: [{ code, host, n, level, state }] } — lobideki herkese açık odalar (n = 10: DOLU), en çok 20
-  ERROR: 'error',       // { msg }
+  ERROR: 'error',       // { kod, msg } — kod dil bağımsızdır (istemci t('sunucu.' + kod)), msg Türkçe yedek
   ROUND: 'round',       // yeni tur: { round, you, role, known: [[id, rol]], names, scores, history, intro }
   STATE: 'st',          // her pakette, istemciye özel: süre, evre, işaretler, izler, efektler, kendi sayaçların, olaylar
   RESULT: 'result',     // tur sonu: { result, scores, history, final, next }
@@ -58,6 +58,6 @@ export const roomCode = () => {
 };
 /** Kod girişi: büyük harf, harf ve rakam dışı atılır; tiresiz yazılan `KPRT4` → `KPRT-4`. */
 export const normalizeCode = v => {
-  const s = String(v ?? '').toLocaleUpperCase('tr').replace(/İ/g, 'I').replace(/[^A-Z0-9]/g, '');
+  const s = String(v ?? '').toLocaleUpperCase('tr').replace(/\u0130/g, 'I').replace(/[^A-Z0-9]/g, '');
   return s.length === 5 ? `${s.slice(0, 4)}-${s[4]}` : s;
 };

@@ -22,9 +22,11 @@ export function nearest(world, a, predicate, range = CFG.reach) {
 /**
  * Olay günlüğü yalnızca insanların ekranındadır: özel bildirim (to) yalnızca o insana yazılır (bota gidenler atılır),
  * to'suz olay herkesindir. Arayüz kendi numarasına ait olanları süzer.
+ * Olay metin değil **kod** taşır (dil standardı): istemci `t('olay.' + kod, v)` ile kendi dilinde yazar; çevrim içinde
+ * sunucu da yalnızca kodu ve değişkenleri yollar (bkz. src/diller/tr.js `olay.*`).
  */
-export function emit(world, text, kind = 'info', to = null) {
+export function emit(world, kod, kind = 'info', to = null, v = null) {
   if (to !== null && !world.humans.has(to)) return;
-  world.events.push({ id: ++world.serial, text, kind, time: world.time, to });
+  world.events.push({ id: ++world.serial, kod, v, kind, time: world.time, to });
   if (world.events.length > 60) world.events.shift();
 }

@@ -211,3 +211,8 @@ button.room-row{width:100%;text-align:left;font:inherit;color:inherit;cursor:poi
 @media (max-height:1000px){#menu .rule-cards{display:none}}
 @media (max-width:480px){#online-row{flex-wrap:wrap}#online-row #quick{flex-basis:100%}.room-tag{display:none}}
 @media (max-height:500px){#menu{bottom:28px}#online-block{margin-top:12px}#online-row #quick,#online-row .secondary{padding:11px 12px}#rooms-block{margin-top:10px}}
+/* Dil düğmesi (dil standardı): üst çubuğun sonunda, öbür düğmelerle aynı; öbür dili yazar (EN / TR). Telefonda simgeye
+   inen çubukta da yazıyla durur. Maç sürerken gizli: sayfayı yeniden yükler, maçı bozar (Esc menüsünde de yok). */
+#dil{font-weight:700;letter-spacing:1px}
+body.playing #dil{display:none}
+@media (max-width:650px),(max-height:560px){#toptools #dil{font-size:11px;letter-spacing:.5px}}

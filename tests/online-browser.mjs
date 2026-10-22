@@ -12,7 +12,7 @@ const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle',
 try {
   const errors = [];
   async function player(path) {
-    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } }), page = await ctx.newPage();
+    const ctx = await browser.newContext({ locale: 'tr-TR', viewport: { width: 1280, height: 800 } }), page = await ctx.newPage();
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', e => { if (e.type() === 'error') errors.push(e.text()); });
     await page.goto(url + path);

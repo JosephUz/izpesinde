@@ -1,4 +1,5 @@
 import { CFG } from './config.js';
+import { t as cevir } from './dil.js'; // `t` bu dosyada sahne saniyesidir
 import { REGIONS } from './environment.js';
 import { blocked, dist, route, safe } from './physics.js';
 import { emit } from './roster.js';
@@ -109,23 +110,23 @@ export const ROLLER = {
 };
 
 /**
- * Ekrandaki direktif yazıları: `[başlangıç, bitiş, metin]` (sahne saniyesi). Aynı anda tek yazı görünür ve her yazı
+ * Ekrandaki direktif yazıları: `[başlangıç, bitiş, sözlük anahtarı]` (sahne saniyesi; metin src/diller/*.js `gosteri.*`). Aynı anda tek yazı görünür ve her yazı
  * en az 1,5 sn kalır. Tuşlar oyunun kendi kontrol listesinden alınmıştır (bkz. src/screens.js KEYS ve yardım ekranı):
  * suçlu Q ile kılık değiştirir ve sol tıkla öldürür, dedektif sol tıkla işaretler, savcı sol tıkla yakalar, Shift koşar.
  */
 export const YAZILAR = [
-  [0.35, 3.40, 'SEN SUÇLUSUN · kalabalığa karış'],
-  [3.60, 6.30, 'Q: imleçteki kişinin kılığına gir'],
-  [6.60, 9.05, 'Dikkat: arkanda iz bırakıyorsun'],
-  [9.45, 12.55, 'SEN SAVCISIN · izleri takip et'],
-  [12.80, 15.75, 'Savcı izlerini yalnız savcılar görür'],
-  [16.00, 18.30, 'İzler odunluktan pazara gidiyor'],
-  [18.70, 21.15, 'SEN DEDEKTİFSİN · şüpheliyi bul'],
-  [21.30, 22.95, 'Sol tık: İŞARETLE — savcı yakalasın'],
-  [23.25, 26.20, 'İşaret düştü: suçluya koş'],
-  [26.40, 29.35, 'SHIFT: koş — aradaki açık kapanıyor'],
-  [29.60, 32.25, 'Sol tık: YAKALA'],
-  [32.45, 35.05, 'YAKALANDI'],
+  [0.35, 3.40, 'gosteri.y01'],
+  [3.60, 6.30, 'gosteri.y02'],
+  [6.60, 9.05, 'gosteri.y03'],
+  [9.45, 12.55, 'gosteri.y04'],
+  [12.80, 15.75, 'gosteri.y05'],
+  [16.00, 18.30, 'gosteri.y06'],
+  [18.70, 21.15, 'gosteri.y07'],
+  [21.30, 22.95, 'gosteri.y08'],
+  [23.25, 26.20, 'gosteri.y09'],
+  [26.40, 29.35, 'gosteri.y10'],
+  [29.60, 32.25, 'gosteri.y11'],
+  [32.45, 35.05, 'gosteri.y12'],
 ];
 
 /** İki nokta arasındaki düz çizgi engelden geçiyor mu (yarım birim aralıkla örneklenir). */
@@ -211,7 +212,6 @@ export function createRoller(root, K = ROLLER) {
   const world = createWorld({ seed: K.seed, level: 'normal', humans: [K.savci, K.suclu, K.dedektif] });
   startRound(world, 'prosecutor');
   const savci = world.actors[K.savci], suclu = world.actors[K.suclu], dedektif = world.actors[K.dedektif];
-  const koru = REGIONS[2];
 
   // Roller sahnenin istediği gibi sabitlenir; tanıdıklar (suçlular birbirini, kanun savcıları tanır) yeniden kurulur.
   world.actors.slice(0, 10).forEach((a, i) => { a.role = K.roller[i]; a.known = new Set(); a.suspects = new Map(); a.path = []; a.goal = null; });
@@ -240,7 +240,7 @@ export function createRoller(root, K = ROLLER) {
   // Sahne suçlunun gözünden açılır: HUD ilk kareden itibaren onun rol kartını göstersin (bkz. sahne(), `world.player`).
   world.player = suclu;
   world.events = [];
-  emit(world, `Son dakikalar: izler sıklaştı. Bir suçlu ${koru.name.toLocaleLowerCase('tr')}nda.`, 'clue');
+  emit(world, 'gosteriKoru', 'clue');
 
   // Sahnenin saati ayrı tutulur: oyunun tur saati yakalamadan sonra da akar, sahne ise kendi çizelgesini izler.
   let saniye = 0, kilikTamam = false, isaretTamam = false, yakalandiAt = 0, sonGoz = null;
@@ -346,7 +346,8 @@ export function createRoller(root, K = ROLLER) {
       yazi = YAZILAR.find(([a, b]) => t >= a && t < b)?.[2] || '';
       if (root) {
         yaziEl ??= root.querySelector('#iz-gosteri-yazi') || root.appendChild(Object.assign(document.createElement('div'), { id: 'iz-gosteri-yazi' }));
-        if (yaziEl.textContent !== yazi) yaziEl.textContent = yazi;
+        const metin = yazi ? cevir(yazi) : '';
+        if (yaziEl.textContent !== metin) yaziEl.textContent = metin;
         yaziEl.hidden = !yazi;
       }
 

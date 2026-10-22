@@ -37,7 +37,8 @@ export function createRooms({ log = console.log } = {}) {
 
   const send = (conn, obj) => { if (conn.ws && conn.ws.readyState === 1) conn.ws.send(JSON.stringify(obj)); };
   const sendBin = (conn, bytes) => { if (conn.ws && conn.ws.readyState === 1) conn.ws.send(bytes, { binary: true }); };
-  const error = (conn, msg) => send(conn, { t: S2C.ERROR, msg });
+  /** Hata: dil bağımsız kod (istemci kendi dilinde yazar, bkz. src/diller/*.js `sunucu.*`) + Türkçe yedek metin. */
+  const error = (conn, kod, msg) => send(conn, { t: S2C.ERROR, kod, msg });
 
   /**
    * Çevrim içi sayısı ve açık oda sayısı: siteyi açan her sekme boşta bir bağlantı tutar; ikisinden biri değişince en
@@ -254,10 +255,10 @@ export function createRooms({ log = console.log } = {}) {
       case C2S.CREATE: { createRoom(conn, msg.level, msg.private === true); return; }
       case C2S.JOIN: {
         const r = rooms.get(normalizeCode(msg.code));
-        if (!r) return error(conn, 'Böyle bir oda yok');
+        if (!r) return error(conn, 'oda.yok', 'Böyle bir oda yok');
         if (r === room) { broadcastLobby(r); if (r.state === 'playing') sendRound(r, conn); return; }
-        if (r.state !== 'lobby') return error(conn, 'Maç başlamış');
-        if (!r.seats.includes(null)) return error(conn, 'Oda dolu');
+        if (r.state !== 'lobby') return error(conn, 'oda.basladi', 'Maç başlamış');
+        if (!r.seats.includes(null)) return error(conn, 'oda.dolu', 'Oda dolu');
         joinRoom(conn, r);
         return;
       }

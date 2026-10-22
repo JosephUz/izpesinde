@@ -1,4 +1,5 @@
 import { CFG } from './config.js';
+import { t } from './dil.js';
 import { dist } from './physics.js';
 import { active } from './roster.js';
 import { createTouch, TOUCH } from './touch.js';
@@ -17,8 +18,8 @@ import { createTouch, TOUCH } from './touch.js';
  * eylemi (seçili hedefe), Kılık (suçlu, seçili hedefe), Kutu, Çalış, Zıpla, Atıl; üstte Menü (Esc) ve Skor (Tab).
  */
 const TOUCH_BUTTONS = [
-  { id: 'use', label: 'İŞARETLE' }, { id: 'swap', label: 'KILIK', sub: '−1' }, { id: 'jump', label: 'ZIPLA' }, { id: 'dash', label: 'ATIL' },
-  { id: 'carry', label: 'KUTU' }, { id: 'blend', label: 'ÇALIŞ' }, { id: 'menu', label: '☰' }, { id: 'score', label: 'SKOR' }, { id: 'map', label: 'HARİTA' },
+  { id: 'use', label: t('dokun.isaretle') }, { id: 'swap', label: t('dokun.kilik'), sub: '−1' }, { id: 'jump', label: t('dokun.zipla') }, { id: 'dash', label: t('dokun.atil') },
+  { id: 'carry', label: t('dokun.kutu') }, { id: 'blend', label: t('dokun.calis') }, { id: 'menu', label: '☰' }, { id: 'score', label: t('dokun.skor') }, { id: 'map', label: t('dokun.harita') },
 ];
 const BINDS = { KeyE: 'carry', KeyF: 'blend', Space: 'jump' };
 
@@ -108,7 +109,7 @@ export function createInput(canvas, app, hooks, touchRoot = null) {
     /** Dokunmatik düğmeleri role göre ayarla: büyük düğmenin adı ve Kılık yalnızca suçluda. */
     touchRole(role) {
       if (!touch) return;
-      touch.button('use').firstElementChild.textContent = { detective: 'İŞARETLE', prosecutor: 'YAKALA', criminal: 'ÖLDÜR' }[role] || 'EYLEM';
+      touch.button('use').firstElementChild.textContent = t({ detective: 'dokun.isaretle', prosecutor: 'dokun.yakala', criminal: 'dokun.oldur' }[role] || 'dokun.eylem');
       touch.button('swap').hidden = role !== 'criminal';
     },
     clear() { keys.clear(); pending = {}; touch?.clear(); },

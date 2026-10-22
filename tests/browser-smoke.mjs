@@ -10,7 +10,7 @@ const url = process.env.GAME_URL || 'http://127.0.0.1:5197';
 await mkdir('artifacts', { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=d3d11', '--ignore-gpu-blocklist'] });
 try {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } }), errors = [];
+  const page = await browser.newPage({ locale: 'tr-TR', viewport: { width: 1440, height: 900 } }), errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', e => { if (e.type() === 'error') errors.push(e.text()); });
   const game = (fn, arg) => page.evaluate(fn, arg);
@@ -84,13 +84,13 @@ try {
   });
   await clickOn(30);
   // Uzağa yığılan bot dedektifler birbirini işaretlerse bizimki kalkar (kasabada tek işaret): oyuncunun işaret olayına da bakılır.
-  assert.ok(await game(() => window.__iz.world.marks.get(30)?.owner === 0 || window.__iz.world.events.some(e => e.to === 0 && e.text.startsWith('İşaret bırakıldı'))), 'dedektif sol tıkla işaretler');
+  assert.ok(await game(() => window.__iz.world.marks.get(30)?.owner === 0 || window.__iz.world.events.some(e => e.to === 0 && e.kod === 'isaretBirakildi')), 'dedektif sol tıkla işaretler');
   assert.equal(await game(() => window.__iz.reachRing()), null, 'dedektifin menzil halkası yok (menzil görüş)');
   await game(() => window.__iz.setRole('prosecutor')); await page.waitForTimeout(100);
   assert.deepEqual(await game(() => window.__iz.reachRing()), { role: 'prosecutor', radius: 4 }, 'savcının yakalama halkası');
   await page.screenshot({ path: 'artifacts/reach-prosecutor.png' });
   await clickOn(30);
-  assert.ok(await game(() => window.__iz.world.marks.get(30)?.cleared || window.__iz.world.events.some(e => e.to === 0 && e.text === 'Yanlış kişi (−1).')), 'savcı sol tıkla yakalar (yanlış kişi: aklanır)');
+  assert.ok(await game(() => window.__iz.world.marks.get(30)?.cleared || window.__iz.world.events.some(e => e.to === 0 && e.kod === 'yanlisKisi')), 'savcı sol tıkla yakalar (yanlış kişi: aklanır)');
   // Suçlu: imleçteki kişinin kılığına Q ile girer.
   await game(() => window.__iz.setRole('criminal')); await page.waitForTimeout(100);
   assert.deepEqual(await game(() => window.__iz.reachRing()), { role: 'criminal', radius: 2.8 }, 'suçlunun öldürme halkası');
@@ -217,7 +217,7 @@ try {
   // Gösteri kipi (`?gosteri=son-takip`, içerik videosu için; bkz. src/gosteri.js). Sahnenin zamanlaması kural
   // testinde ölçülür (tests/rules-smoke.mjs); burada yalnızca tarayıcıda açıldığı denetlenir: menü atlanır, HUD
   // sahnenin durumunu gösterir, girdiye bakan parçalar gizlenir ve savcı izin peşinde yürümeye başlar.
-  const gp = await browser.newPage({ viewport: { width: 1080, height: 1920 } }), gErrors = [];
+  const gp = await browser.newPage({ locale: 'tr-TR', viewport: { width: 1080, height: 1920 } }), gErrors = [];
   gp.on('pageerror', e => gErrors.push(e.message));
   gp.on('console', e => { if (e.type() === 'error') gErrors.push(e.text()); });
   await gp.goto(url + '/?gosteri=son-takip&muzik=0');
@@ -250,7 +250,7 @@ try {
   // Üç rol gösterisi (`?gosteri=roller`, bkz. src/gosteri-roller.js). Zamanlaması kural testinde ölçülür; burada
   // tarayıcıya ait olan denetlenir: direktif yazısı kutusu doğar, HUD rolün gözünden okunur ve kamera role göre
   // kendi karakterine bağlanır.
-  const rp = await browser.newPage({ viewport: { width: 1080, height: 1920 } }), rErrors = [];
+  const rp = await browser.newPage({ locale: 'tr-TR', viewport: { width: 1080, height: 1920 } }), rErrors = [];
   rp.on('pageerror', e => rErrors.push(e.message));
   rp.on('console', e => { if (e.type() === 'error') rErrors.push(e.text()); });
   await rp.goto(url + '/?gosteri=roller&muzik=0');

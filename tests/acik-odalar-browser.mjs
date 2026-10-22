@@ -14,7 +14,7 @@ const browser = await chromium.launch({ headless: true, args: ['--mute-audio', '
 try {
   const errors = [];
   async function player(nick, viewport = { width: 1280, height: 800 }, path = '/?test=1') {
-    const ctx = await browser.newContext({ viewport }), page = await ctx.newPage();
+    const ctx = await browser.newContext({ locale: 'tr-TR', viewport }), page = await ctx.newPage();
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', e => { if (e.type() === 'error') errors.push(e.text()); });
     await page.goto(url + path);

@@ -1,5 +1,11 @@
 # İz Peşinde
 
+> **EN:** An isometric medieval hidden-identity game in the browser (Three.js): the culprit hides in the crowd, the detective reads the clues, the prosecutor makes the arrest; solo against bots or in an online room.
+>
+> **TR:** Tarayıcıda (Three.js) izometrik ortaçağ gizli kimlik oyunu: suçlu kalabalığa karışır, dedektif izleri okur, savcı yakalar; botlara karşı tek başına ya da çevrim içi odada.
+
+**Play / Oyna:** https://izpesinde.josephuz.com · **Source / Kaynak:** https://github.com/JosephUz/izpesinde
+
 Three.js ile tarayıcıda çalışan, izometrik bir **ortaçağ gizli kimlik** oyunu: tek başına botlara karşı ya da
 **çevrim içi odada** arkadaşlarla. Karaağaç kasabasında 10 yarışmacı ve 170 kasabalı dolaşır. Tek başına her tur
 rolünü seçersin, odada roller her tur rastgele gelir: **suçlu** kalabalığa karışıp süre bitene
@@ -8,8 +14,6 @@ doğru kişiyi yakalamaya çalışır. Beş turun sonunda en yüksek kişisel sk
 
 Kuralların tamamı ve gerekçeleri: [DEDEKTIF_OYUNU_TASARIM.md](DEDEKTIF_OYUNU_TASARIM.md). Görsel dil ve kod düzeni
 [Çayır Muhafızı](https://github.com/JosephUz/cayirmuhafizi) ile aynıdır.
-
-**Oyna**: https://izpesinde.josephuz.com · **Kaynak**: https://github.com/JosephUz/izpesinde
 
 ## Başlatma
 
@@ -243,3 +247,18 @@ yetkili adımda bütün kurallar işler. İstemci modülleri dünyayı yalnızca
 Hesap, kayıtlı maç, yabancılarla eşleştirme ve dokunmatik kontrol yoktur. Görüş alanı çiziminde binalar görüşü kesmez (botların algısında
 görüş hattı vardır). Bot dengesi ilk ayardadır; otomatik maçlarda kanun 20 turun 11’ini kazanıyor; suçluların galibiyetlerinin çoğu iki savcıyı öldürerek geliyor. Oynanışa
 göre `LEVELS` ve `CFG.trace` değerleri ayarlanmalıdır.
+
+## Lisans / License
+
+- **Kod:** [MIT](LICENSE), Copyright (c) 2026 JosephUz. Kodu kullanabilir, değiştirebilir, dağıtabilirsin.
+- **MIT dışında, tüm hakları saklıdır:** "İz Peşinde" ve "JosephUz" adları; `muzik/` altındaki müzikler. Ayrıntı: [TRADEMARKS.md](TRADEMARKS.md). Müzik için `muzik/LISANS.txt`.
+- **Fork'lar** başka bir ad ve logo kullanmalı, resmî sürüm olduğunu ima etmemeli.
+- **Üçüncü taraf:** [three.js](https://github.com/mrdoob/three.js) ve [ws](https://github.com/websockets/ws) npm bağımlılığıdır (ikisi de MIT), depoda değil, kendi lisanslarıyla gelir. Müziklerdeki enstrüman örnekleri VSCO 2 Community Edition (CC0).
+
+> **In English:** The code is licensed under [MIT](LICENSE). The name "İz Peşinde", the name "JosephUz", the music in `muzik/` are **not** covered by MIT and are all rights reserved; see [TRADEMARKS.md](TRADEMARKS.md). Forks must use a different name and logo.
+
+## Katkı / Contributing
+
+Hata bildirimi, öneri ve pull request'e açığız. Büyük bir değişiklikten önce bir [issue](https://github.com/JosephUz/izpesinde/issues) açıp konuşalım; oyunun dengesi ve yönü JosephUz'da. Kod ve oyun Türkçe: değişken, işlev ve mesaj adları Türkçe, çevresindeki kodun düzenine uy; `npm test` geçmeli. Gönderdiğin katkı bu deponun MIT lisansıyla yayımlanır. Müzik, ses ya da görsel eklemeden önce issue'da sor. Güvenlik açıklarını issue yerine [SECURITY.md](SECURITY.md)'deki yoldan bildir.
+
+> **In English:** Issues and pull requests are welcome; please open an issue before large changes. Contributions are accepted under the MIT license of this repository. Report security issues privately as described in [SECURITY.md](SECURITY.md).

@@ -4,3 +4,13 @@ node_modules/
 dist/
 artifacts/
 .wrangler/
+# Açık depoya girmeyecek yerel dosyalar (sürücü günlükleri, deneme betikleri, sırlar, veritabanları).
+NVIDIA Corporation/
+scratch/
+.env.*
+!.env.example
+*.jks
+*.keystore
+keystore.properties
+*.db
+*.sqlite

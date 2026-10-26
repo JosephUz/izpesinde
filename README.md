@@ -6,6 +6,9 @@
 
 **Play / Oyna:** https://izpesinde.josephuz.com · **Source / Kaynak:** https://github.com/JosephUz/izpesinde
 
+<p align="center"><img src="docs/ekran/1.jpg" alt="İz Peşinde" width="100%"></p>
+<p align="center"><img src="docs/ekran/2.jpg" alt="İz Peşinde" width="49%"> <img src="docs/ekran/3.jpg" alt="İz Peşinde" width="49%"></p>
+
 Three.js ile tarayıcıda çalışan, izometrik bir **ortaçağ gizli kimlik** oyunu: tek başına botlara karşı ya da
 **çevrim içi odada** arkadaşlarla. Karaağaç kasabasında 10 yarışmacı ve 170 kasabalı dolaşır. Tek başına her tur
 rolünü seçersin, odada roller her tur rastgele gelir: **suçlu** kalabalığa karışıp süre bitene
